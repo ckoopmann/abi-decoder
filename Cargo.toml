@@ -1,0 +1,16 @@
+[package]
+name = "abi-decoder"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+clap = { version = "4.0", features = ["derive"] }
+ethabi = "18.0.0"
+ethereum-types = "0.14.0"
+ethers = "1.0.2"
+eyre = "0.6.8"
+hex = "0.4.3"
+reqwest = "0.11.13"
+tokio ={ version = "1.23.0", features = ["full"] }
