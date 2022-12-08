@@ -54,6 +54,16 @@ pub enum MarkerType {
     TopLevel,
 }
 
+// Adds padding to the end of the data if it contains trailing bytes
+pub fn add_padding(encoded_data: &str) -> String {
+    let mut encoded_data = encoded_data.to_string();
+    if encoded_data.len() % 64 != 0 {
+        let padding = 64 - (encoded_data.len() % 64);
+        encoded_data.push_str(&"0".repeat(padding));
+    }
+    return encoded_data;
+}
+
 pub fn chunk_data(encoded_data: &str) -> Vec<&str> {
     let mut encoded_data = encoded_data;
     if encoded_data.len() % 64 != 0 {

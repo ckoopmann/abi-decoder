@@ -11,20 +11,48 @@ pub mod utils;
 pub mod decoder;
 
 pub async fn decode_transaction_calldata(tx_hash: &str) -> Vec<Token> {
+    let arguments_encoded = get_encoded_arguments(tx_hash).await;
+    if arguments_encoded.len() == 0 {
+        println!("Not a valid function call");
+        return Vec::new();
+    }
+
+    let decoded = chunk_and_decode_data(&arguments_encoded);
+    return decoded;
+}
+
+pub async fn get_encoded_arguments(tx_hash: &str) -> String {
+    let calldata = get_calldata(tx_hash).await;
+    let arguments_encoded = split_off_encoded_arguments(&calldata);
+    return arguments_encoded.to_string();
+}
+
+pub fn split_off_encoded_arguments(calldata: &str) -> &str {
+    if calldata.len() < 8  {
+        return "";
+    }
+    let (_, arguments_encoded) = calldata.split_at(8);
+    return arguments_encoded;
+}
+
+pub async fn get_calldata(tx_hash: &str) -> String {
     let provider = Provider::<Http>::try_from(
     "https://mainnet.infura.io/v3/c60b0bb42f8a4c6481ecd229eddaca27"
 ).expect("could not instantiate HTTP Provider");
     let mut tx_hash_bytes: [u8; 32] = [0; 32];
     hex::decode_to_slice(tx_hash, &mut tx_hash_bytes).expect("Decoding failed");
+    println!("Getting trransaction: {:?}", tx_hash);
     let tx = provider.get_transaction(tx_hash_bytes).await.unwrap().unwrap();
-    let calldata = hex::encode(tx.input.0);
-    let (selector, arguments_encoded) = calldata.split_at(8);
-    let decoded = chunk_and_decode_data(arguments_encoded);
-    return decoded;
+    return hex::encode(tx.input.0);
 }
 
 fn chunk_and_decode_data(encoded_arguments: &str) -> Vec<Token> {
-        let chunks = decoder::chunk_data(encoded_arguments);
+        if encoded_arguments.len() == 0 {
+            return Vec::new();
+        }
+
+        let encoded_arguments = decoder::add_padding(encoded_arguments);
+        let chunks = decoder::chunk_data(&encoded_arguments);
         for (i, chunk) in chunks.iter().enumerate() {
             println!("{}: {} - {}", i, chunk, u64::from_str_radix(chunk.trim_start_matches("0"), 16).unwrap_or(0));
         }
@@ -70,6 +98,12 @@ mod tests {
                 zeroex_exchange_issuance,
                 "0x001f464ec829d10f87c77c6589dff342fb36873a8e59a0ad21a102f8a50576f9"
             ),
+            // (
+            //     // This transaction contains extra data appeneded after the encoded_arguments which
+            //     // will always mess up this algorithm
+            //     cockpunch_mint_with_trailing_bytes,
+            //     "a848faf90566f79928e8a01cf483f2f1e899fced845e9e5cc164b79a295becd5"
+            // )
         ]
     );
 
@@ -77,6 +111,11 @@ mod tests {
     async fn same_decoding_as_etherscan(tx_hash: &str) {
         let tx_hash = tx_hash.trim_start_matches("0x");
         let expected_tokens = utils::remove_single_top_level_tuple(decode_tx_via_etherscan(tx_hash).await.unwrap());
+
+        let arguments_encoded = get_encoded_arguments(tx_hash).await;
+        let expected_tokens_reencoded = hex::encode(ethabi::encode(&expected_tokens));
+        println!("Checking reencoded tokens");
+        assert_eq!(arguments_encoded, expected_tokens_reencoded);
 
         let tokens = decode_transaction_calldata(tx_hash).await;
         println!("");
@@ -94,6 +133,31 @@ mod tests {
         let cleaned_expected_tokens = utils::replace_zero_value_with_uint(expected_tokens);
         assert_eq!(tokens, cleaned_expected_tokens);
     }
+
+    #[tokio::main]
+    // #[test]
+    async fn can_re_encode_transactions() {
+        let start_block = 16137000;
+        let num_blocks = 2;
+        let provider = Provider::<Http>::try_from(
+            "https://mainnet.infura.io/v3/c60b0bb42f8a4c6481ecd229eddaca27"
+        ).expect("could not instantiate HTTP Provider");
+        for block_number in start_block..start_block+num_blocks {
+            println!("Testing transactions from block: {}", block_number);
+            let block = provider.get_block_with_txs(block_number).await.unwrap().unwrap();
+            println!("Number of transactions in block: {}", block.transactions.len());
+            for (i,tx) in block.transactions.iter().enumerate() {
+                println!("Tx index: {}", i);
+                let tx_hash = hex::encode(tx.hash.0.to_vec());
+                println!("Decoding tx: {}", tx_hash);
+                let tokens = decode_transaction_calldata(&tx_hash).await;
+                let tokens_reencoded = hex::encode(ethabi::encode(&tokens));
+                let calldata = hex::encode(&tx.input.0);
+                let encoded_arguments = split_off_encoded_arguments(&calldata);
+                assert_eq!(tokens_reencoded, encoded_arguments);
+            }
+        }
+    }
 }
 
 async fn decode_tx_via_etherscan(tx_hash: &str) -> Option<Vec<Token>> {
@@ -104,8 +168,8 @@ async fn decode_tx_via_etherscan(tx_hash: &str) -> Option<Vec<Token>> {
 
         let mut tx_hash_bytes: [u8; 32] = [0; 32];
         hex::decode_to_slice(tx_hash, &mut tx_hash_bytes).expect("Decoding failed");
-
         let tx = provider.get_transaction(tx_hash_bytes).await.unwrap().unwrap();
+
         let contract_address = format!("0x{:}", hex::encode(tx.to.unwrap()));
         let contract_abi = utils::get_etherscan_contract(&contract_address, "etherscan.io").await.unwrap();
         let contract = Contract::load(contract_abi.as_bytes()).unwrap();
