@@ -793,7 +793,7 @@ fn get_array_length(
         return Some((1, remaining_data_length));
     }
 
-    for j in (1..((remaining_data_length / 2) + 1)).rev() {
+    for j in (0..((remaining_data_length / 2) + 1)).rev() {
         if raw_length * j == remaining_data_length {
             println!("calculated in for loop (length, size): {:?}", (raw_length, j));
             return Some((raw_length, j));
@@ -1097,7 +1097,7 @@ mod tests {
         }
         println!("");
         println!("");
-        let encoded_arguments = hex::encode(ethabi::encode(&arguments));
+        let encoded_arguments = add_padding(&hex::encode(ethabi::encode(&arguments)));
 
         let chunks = chunk_data(&encoded_arguments);
         for (i, chunk) in chunks.iter().enumerate() {
@@ -1116,7 +1116,7 @@ mod tests {
         }
         println!("");
         println!("");
-        let encoded_arguments = hex::encode(ethabi::encode(&arguments));
+        let encoded_arguments = add_padding(&hex::encode(ethabi::encode(&arguments)));
 
         let chunks = chunk_data(&encoded_arguments);
         for (i, chunk) in chunks.iter().enumerate() {
