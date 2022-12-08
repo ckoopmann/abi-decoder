@@ -94,7 +94,7 @@ pub fn generate_token(
     disallowed_markers: HashMap<usize, MarkerType>,
     recurse_disallow_markers: bool,
 ) -> Option<TokenOrTopLevel> {
-    // println!("Begin parsing parse_marker: {:?}", parse_marker);
+    println!("Begin parsing parse_marker: {:?}", parse_marker);
     // println!(
     //     "chunks from: {:?} - to: {:?}",
     //     chunks[0],
@@ -432,7 +432,7 @@ pub fn generate_parse_markers(
     chunks: Vec<&str>,
     in_dynamic_offset: bool
 ) -> Vec<ParseMarker> {
-    // println!("Generating parse markers: {:?}", chunks);
+    println!("Generating parse markers: {:?}", chunks);
     let mut parse_markers: Vec<ParseMarker> = Vec::new();
     let mut most_recent_tuple_offset: usize = 0;
     let mut most_recent_tuple_location: Option<usize> = None;
@@ -668,13 +668,16 @@ fn get_array_marker_static(
         }));
     }
 
-    Some(ParseMarker::StaticArray(
+    let marker = ParseMarker::StaticArray(
         element_size,
         Location {
             start: i + 1,
-            end: data_length + 1,
+            end: i + length*element_size + 1,
         },
-    ))
+    );
+    println!("length: {:} - element_size: {:}", length, element_size);
+    println!("Static array marker = {:?}", marker);
+    Some(marker)
 }
 
 fn get_array_marker_dynamic(
