@@ -738,6 +738,12 @@ fn get_array_marker_dynamic(
                 panic!("Invalid tuple marker");
             }
             if j == length - 1 {
+                // At the end the dynamic array should fill up all of the space until the first
+                // tuple
+                let remaining_data_length = std::cmp::min(data_length, first_tuple_copy) - i;
+                if length != remaining_data_length {
+                    return None;
+                }
                 let mut locations = Vec::new();
                 for j in parse_markers.len()..parse_markers_copy.len() {
                     if let ParseMarker::DynamicOffset(j, ref location) = parse_markers_copy[j] {
