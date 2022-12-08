@@ -705,6 +705,9 @@ fn get_array_marker_dynamic(
     let mut first_tuple_copy = (*first_tuple).clone();
     let mut parse_markers_copy = (*parse_markers).clone();
     let limited_chunks = &chunks[i + 1..data_length].to_vec();
+    if limited_chunks.len() == 0 {
+        return None;
+    }
     for j in 0..length {
         if let Some((tuple_offset, tuple_location, tuple_parse_marker)) = get_dynamic_offset_marker(
             &parse_markers_copy,
