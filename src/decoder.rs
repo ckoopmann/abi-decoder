@@ -482,7 +482,7 @@ pub fn generate_parse_markers(
             &mut most_recent_tuple_offset,
             &mut most_recent_tuple_location,
             &mut first_tuple,
-            in_dynamic_offset
+            in_dynamic_offset && i==0
         ) {
             if let ParseMarker::StaticArray(element_size, ref location) = array_marker {
                 i = location.end;
@@ -581,9 +581,9 @@ fn get_array_marker(
     most_recent_tuple_offset: &mut usize,
     most_recent_tuple_location: &mut Option<usize>,
     first_tuple: &mut usize,
-    in_dynamic_offset: bool
+    is_first_element_in_dynamic_offset: bool
 ) -> Option<ParseMarker> {
-    if !in_dynamic_offset {
+    if !is_first_element_in_dynamic_offset{
         return None;
     }
     if let Some(marker) = get_array_marker_dynamic(
