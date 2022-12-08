@@ -770,17 +770,10 @@ fn get_array_length(
         return None;
     }
     let raw_length = U256::from_str(&chunk).unwrap().as_usize();
-    // println!("Getting array length - raw_length {:} - data_length {:} - first_tuple {:} ", raw_length, data_length, first_tuple);
-    if raw_length == 1  {
-        println!("raw_length==1");
-    }
-    // TODO: Maybe can remove this
-    if raw_length == 0 {
-        return Some(( 0,0 ));
-    }
 
     // TODO: Excluding single element arrays of static content
     if raw_length == 1 && !is_dynamic {
+        println!("Excluding single element arrays of static content - {:}", i);
         return None;
     }
 
