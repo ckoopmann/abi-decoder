@@ -1,6 +1,7 @@
 use ethabi::{Contract, Token};
 
 
+use ethereum_types::H160;
 use ethers::providers::{Http, Middleware, Provider};
 
 use std::convert::TryFrom;
@@ -136,6 +137,10 @@ mod tests {
                 opensea_fullfill_multiple_orders_shorter,
                 "0x7c1531482c3c1d1d42638016e8912ed7d12ba709efdb0db77790308f4af8a531"
             ),
+            (
+                random_nft_claim,
+                "0x8d0ad5358f0a402906b8ee9cfdcb466915f52abb97c2b036ca6e292983e03a7d"
+            )
         ]
     );
 
@@ -206,7 +211,7 @@ mod tests {
         // to get stuck - investigate
         // Increase this value to find the smallest problematic transaction for debugging
         let max_calldata_size = 64 * 100;
-        let num_blocks = 100;
+        let num_blocks = 10;
         let seaport_address =
             H160::from_slice(&hex::decode("00000000006c3852cbef3e08e8df289169ede581").unwrap());
         let provider = Provider::<Http>::try_from(
@@ -257,7 +262,7 @@ mod tests {
     #[test]
     async fn can_re_encode_all_transactions_not_to_seaport() {
         let start_block = 16136002;
-        let num_blocks = 10;
+        let num_blocks = 2;
         let seaport_address =
             H160::from_slice(&hex::decode("00000000006c3852cbef3e08e8df289169ede581").unwrap());
         let provider = Provider::<Http>::try_from(
