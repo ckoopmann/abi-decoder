@@ -159,19 +159,41 @@ pub fn generate_token(
                 return None;
             }
             let data_to_parse = chunks[location.start..location.end + 1].to_vec();
-            let mut parse_tree = Vec::new();
+            let mut tokens = Vec::new();
             let parse_markers =
                 generate_parse_markers(disallowed_markers.clone(), data_to_parse.clone(), true);
+            let mut new_disallowed_markers = disallowed_markers.clone();
+
             for cur_parse_marker in &parse_markers {
-                parse_tree.push(
-                    generate_token(
-                        cur_parse_marker.clone(),
-                        data_to_parse.clone(),
-                        disallowed_markers.clone(),
-                        true,
-                    )?
-                    .to_token(),
+                let result = generate_token(
+                    cur_parse_marker.clone(),
+                    data_to_parse.clone(),
+                    disallowed_markers.clone(),
+                    true,
                 );
+
+                // println!(
+                //     "Parsemarker result: {:?}",
+                //     result
+                // );
+                if result.is_some() {
+                    tokens.push(result.unwrap().to_token());
+                } else {
+                    if recurse_disallow_markers {
+                        println!("Recursing from dynamic offset loop");
+                        add_disallowed_marker(&mut new_disallowed_markers, &cur_parse_marker)
+                            .ok()?;
+                        return generate_token(
+                            parse_marker.clone(),
+                            chunks.clone(),
+                            new_disallowed_markers.clone(),
+                            recurse_disallow_markers,
+                        );
+                    } else {
+                        println!("Return None for dynamic offset loop");
+                        return None;
+                    }
+                }
             }
             println!(
                 "Recursing on dynamic offset with disallowed_markers: {:?}",
@@ -180,8 +202,8 @@ pub fn generate_token(
             strip_invalid_tokens(
                 &parse_marker,
                 &parse_markers,
-                TokenOrTopLevel::Token(Token::Tuple(parse_tree.clone())),
-                parse_tree,
+                TokenOrTopLevel::Token(Token::Tuple(tokens.clone())),
+                tokens,
                 &disallowed_markers,
                 &chunks,
                 recurse_disallow_markers,
@@ -1002,7 +1024,6 @@ mod tests {
                 vec![Token::Array(vec![
                     Token::Array(vec![
                         Token::Uint(U256::from(128)),
-                        Token::Uint(U256::from(256)),
                         Token::Uint(U256::from(256)),
                     ]),
                     Token::Array(vec![
