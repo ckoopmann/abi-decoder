@@ -162,6 +162,12 @@ mod tests {
         let arguments_encoded = decoder::add_padding(&get_encoded_arguments(tx_hash).await);
         print_chunked_data("#### ENCODED ARGUMENTS ####", &arguments_encoded);
 
+        let expected_tokens = utils::remove_single_top_level_tuple(decode_tx_via_etherscan(tx_hash).await.unwrap());
+        println!("#### Expected Tokens ####");
+        for token in &expected_tokens {
+            utils::print_parse_tree(&token, 0);
+        }
+
         let tokens = decode_transaction_calldata(tx_hash).await;
         println!("#### Decoded Tokens ####");
         for token in &tokens { utils::print_parse_tree(&token, 0);
