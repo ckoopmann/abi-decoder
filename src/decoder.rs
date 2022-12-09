@@ -180,25 +180,25 @@ pub fn generate_token(
                     tokens.push(result.unwrap().to_token());
                 } else {
                     if recurse_disallow_markers {
-                        println!("Recursing from dynamic offset loop");
                         add_disallowed_marker(&mut new_disallowed_markers, &cur_parse_marker)
                             .ok()?;
+                        // println!("Recursing from dynamic offset loop");
                         return generate_token(
                             parse_marker.clone(),
                             chunks.clone(),
                             new_disallowed_markers.clone(),
-                            recurse_disallow_markers,
+                            true,
                         );
                     } else {
-                        println!("Return None for dynamic offset loop");
+                        // println!("Return None for dynamic offset loop");
                         return None;
                     }
                 }
             }
-            println!(
-                "Recursing on dynamic offset with disallowed_markers: {:?}",
-                disallowed_markers
-            );
+            // println!(
+            //     "Recursing on dynamic offset with disallowed_markers: {:?}",
+            //     disallowed_markers.len()
+            // );
             strip_invalid_tokens(
                 &parse_marker,
                 &parse_markers,
@@ -236,13 +236,13 @@ pub fn generate_token(
                     tokens.push(result.unwrap().to_token());
                 } else {
                     if recurse_disallow_markers {
-                        println!("Disallowed markers before: {:?}", new_disallowed_markers);
+                        // println!("Disallowed markers before: {:?}", new_disallowed_markers);
                         add_disallowed_marker(&mut new_disallowed_markers, &cur_parse_marker)
                             .ok()?;
-                        println!(
-                            "Recursing from dynamic array loop: {:?}",
-                            new_disallowed_markers
-                        );
+                        // println!(
+                        //     "Recursing from dynamic array loop: {:?}",
+                        //     new_disallowed_markers
+                        // );
                         return generate_token(
                             parse_marker.clone(),
                             chunks.clone(),
@@ -250,15 +250,15 @@ pub fn generate_token(
                             recurse_disallow_markers,
                         );
                     } else {
-                        println!("Return None for dynamic offset loop");
+                        // println!("Return None for dynamic offset loop");
                         return None;
                     }
                 }
             }
-            println!(
-                "Recursing on dynamic array with disallowed_markers: {:?}",
-                disallowed_markers
-            );
+            // println!(
+            //     "Recursing on dynamic array with disallowed_markers: {:?}",
+            //     disallowed_markers.len()
+            // );
             strip_invalid_tokens(
                 &parse_marker,
                 &parse_markers,
@@ -304,7 +304,7 @@ pub fn generate_token(
                 } else {
                     if recurse_disallow_markers {
                         add_disallowed_marker(&mut new_disallowed_markers, &parse_marker).ok()?;
-                        println!("Recursing from top level loop");
+                        // println!("Recursing from top level loop");
                         return generate_token(
                             ParseMarker::TopLevel,
                             chunks.clone(),
@@ -317,7 +317,7 @@ pub fn generate_token(
                 }
             }
 
-            println!("Stripping invalid tokens for top level: ");
+            // println!("Stripping invalid tokens for top level: ");
             strip_invalid_tokens(
                 &parse_marker,
                 &parse_markers,
@@ -373,9 +373,9 @@ fn strip_invalid_tokens(
     let invalid_token_markers = get_invalid_token_markers(&parse_markers, &tokens);
     // println!("invalid_token_markers: {:?}", invalid_token_markers);
     if invalid_token_markers.len() > 0 {
-        println!("Invalid token in parse_marker: {:?}", parse_marker);
-        println!("Invalid token markers {:?}", invalid_token_markers);
-        println!("disallowed_markers: {:?}", disallowed_markers);
+        // println!("Invalid token in parse_marker: {:?}", parse_marker);
+        // println!("Invalid token markers {:?}", invalid_token_markers);
+        // println!("disallowed_markers: {:?}", disallowed_markers);
         if recurse_disallow_markers {
             let result = rerun_with_invalid_token_markers(
                 &parse_marker,
@@ -1238,6 +1238,70 @@ mod tests {
         ),]
     );
 
+    parameterize!(
+        test_can_reencode_with_added_data_at_the_end,
+        [(
+            array_of_static_tuples_nested_with_extra_data,
+            vec![Token::Array(vec![
+                Token::Tuple(vec![
+                    Token::Array(vec![
+                        Token::Tuple(vec![
+                            Token::Uint(U256::from(128)),
+                            Token::Uint(U256::from(1024)),
+                        ]),
+                        Token::Tuple(vec![
+                            Token::Uint(U256::from(128)),
+                            Token::Uint(U256::from(1024)),
+                        ]),
+                    ]),
+                    Token::Uint(U256::from(128)),
+                ]),
+                Token::Tuple(vec![
+                    Token::Array(vec![
+                        Token::Tuple(vec![
+                            Token::Uint(U256::from(123)),
+                            Token::Uint(U256::from(456)),
+                        ]),
+                        Token::Tuple(vec![
+                            Token::Uint(U256::from(690)),
+                            Token::Uint(U256::from(420)),
+                        ]),
+                    ]),
+                    Token::Uint(U256::from(1)),
+                ]),
+            ]),]
+        ),
+                    (
+                array_of_arrays_with_extra_data,
+                vec![Token::Array(vec![
+                    Token::Array(vec![
+                        Token::Array(vec![
+                            Token::Uint(U256::from(128)),
+                            Token::Uint(U256::from(1024)),
+                        ]),
+                        Token::Array(vec![
+                            Token::Uint(U256::from(1)),
+                            Token::Uint(U256::from(2)),
+                            Token::Uint(U256::from(3)),
+                        ]),
+                    ]),
+                    Token::Array(vec![
+                        Token::Array(vec![
+                            Token::Uint(U256::from(128)),
+                            Token::Uint(U256::from(1024)),
+                        ]),
+                        Token::Array(vec![
+                            Token::Uint(U256::from(1)),
+                            Token::Uint(U256::from(2)),
+                            Token::Uint(U256::from(3)),
+                        ]),
+                    ])
+                ]),]
+            ),
+
+        ]
+    );
+
     fn test_same_encoding(arguments: Vec<Token>) {
         println!("Arguments:");
         for argument in &arguments {
@@ -1262,6 +1326,34 @@ mod tests {
         }
         assert_eq!(tokens, arguments);
     }
+
+    fn test_can_reencode_with_added_data_at_the_end(arguments: Vec<Token>) {
+        println!("Arguments:");
+        for argument in &arguments {
+            utils::print_parse_tree(&argument, 0);
+        }
+        println!("");
+        println!("");
+        let encoded_arguments = add_padding(&hex::encode(ethabi::encode(&arguments)));
+
+        let mut chunks = chunk_data(&encoded_arguments);
+        let extra_data = &"01".repeat(32);
+        chunks.push(extra_data);
+        for (i, chunk) in chunks.iter().enumerate() {
+            println!(
+                "{}: {} - {}",
+                i,
+                chunk,
+                u64::from_str_radix(chunk.trim_start_matches("0"), 16).unwrap_or(0)
+            );
+        }
+        let tokens = decode_chunks(chunks.clone());
+        for token in &tokens {
+            utils::print_parse_tree(&token, 0);
+        }
+        // assert_eq!(tokens, arguments);
+    }
+
     fn test_different_encoding(arguments_and_expected_tokens: (Vec<Token>, Vec<Token>)) {
         let (arguments, expected_tokens) = arguments_and_expected_tokens;
         for argument in &arguments {
