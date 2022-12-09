@@ -196,12 +196,16 @@ mod tests {
         assert_eq!(tokens_reencoded, arguments_encoded);
     }
 
-    // TODO: Opensea/Seaport transactions often are troublesome since they contain complex nested
+    // Opensea/Seaport transactions often are troublesome since they contain complex nested
     // data and added data after the encoded arguments. This makes it hard to decode them correctly
     #[tokio::main]
     #[test]
     async fn can_re_encode_all_transactions_to_seaport() {
         let start_block = 16136002;
+        // TODO: Transactions with very large calldata to seaport methods can cause the algorithm
+        // to get stuck - investigate
+        // Increase this value to find the smallest problematic transaction for debugging
+        let max_calldata_size = 64 * 100;
         let num_blocks = 100;
         let seaport_address =
             H160::from_slice(&hex::decode("00000000006c3852cbef3e08e8df289169ede581").unwrap());
@@ -228,7 +232,7 @@ mod tests {
                     let encoded_arguments =
                         decoder::add_padding(split_off_encoded_arguments(&calldata));
                     print_chunked_data("#### ENCODED ARGUMENTS ####", &encoded_arguments);
-                    if encoded_arguments.len() > 64 * 100  {
+                    if encoded_arguments.len() > max_calldata_size  {
                         println!("Skipping transaction with huge calldata: {}", tx_hash);
                         continue;
                     }
