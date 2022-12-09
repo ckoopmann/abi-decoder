@@ -1,14 +1,14 @@
 use ethabi::param_type::ParamType;
 use ethabi::token::{LenientTokenizer, Token, Tokenizer};
-use ethereum_types::{U256};
-
+use ethereum_types::{H160, H256, U256};
+use ethers::contract;
 use hex;
-
+use std::cmp;
 use std::collections::HashMap;
-
+use std::i64;
 use std::str::FromStr;
 
-
+use crate::utils;
 
 // TODO: Array tokens of different types ?
 // TODO: Array of tuples
@@ -62,7 +62,7 @@ pub fn add_padding(encoded_data: &str) -> String {
         let padding = 64 - (encoded_data.len() % 64);
         encoded_data.push_str(&"0".repeat(padding));
     }
-    encoded_data
+    return encoded_data;
 }
 
 pub fn chunk_data(encoded_data: &str) -> Vec<&str> {
@@ -71,19 +71,19 @@ pub fn chunk_data(encoded_data: &str) -> Vec<&str> {
         panic!("Invalid data length");
     }
     let mut chunks = Vec::new();
-    while !encoded_data.is_empty() {
+    while encoded_data.len() > 0 {
         let (word, rest) = encoded_data.split_at(64);
         chunks.push(word);
         encoded_data = rest;
     }
-    chunks
+    return chunks;
 }
 
 pub fn decode_chunks(chunks: Vec<&str>) -> Vec<Token> {
     // let parse_markers = generate_parse_markers(chunks.clone());
     let result = generate_token(ParseMarker::TopLevel, chunks, HashMap::new(), true);
     if let Some(TokenOrTopLevel::TopLevel(tokens)) = result {
-        tokens
+        return tokens;
     } else {
         panic!("Failed to parse arguments");
     }
@@ -122,7 +122,8 @@ pub fn generate_token(
         ParseMarker::DynamicBytes(padding, ref location) => {
             let mut decoded_bytes: Vec<u8> = chunks[location.start..location.end]
                 .iter()
-                .flat_map(|chunk| hex::decode(chunk).expect("Failed to decode dynamic bytes"))
+                .map(|chunk| hex::decode(chunk).expect("Failed to decode dynamic bytes"))
+                .flatten()
                 .collect();
             decoded_bytes.truncate(decoded_bytes.len().saturating_sub(padding));
             Some(TokenOrTopLevel::Token(Token::Bytes(decoded_bytes)))
@@ -177,19 +178,21 @@ pub fn generate_token(
                 // );
                 if result.is_some() {
                     tokens.push(result.unwrap().to_token());
-                } else if recurse_disallow_markers {
-                    add_disallowed_marker(&mut new_disallowed_markers, cur_parse_marker)
-                        .ok()?;
-                    // println!("Recursing from dynamic offset loop");
-                    return generate_token(
-                        parse_marker.clone(),
-                        chunks.clone(),
-                        new_disallowed_markers.clone(),
-                        true,
-                    );
                 } else {
-                    // println!("Return None for dynamic offset loop");
-                    return None;
+                    if recurse_disallow_markers {
+                        add_disallowed_marker(&mut new_disallowed_markers, &cur_parse_marker)
+                            .ok()?;
+                        // println!("Recursing from dynamic offset loop");
+                        return generate_token(
+                            parse_marker.clone(),
+                            chunks.clone(),
+                            new_disallowed_markers.clone(),
+                            true,
+                        );
+                    } else {
+                        // println!("Return None for dynamic offset loop");
+                        return None;
+                    }
                 }
             }
             // println!(
@@ -231,23 +234,25 @@ pub fn generate_token(
                 // );
                 if result.is_some() {
                     tokens.push(result.unwrap().to_token());
-                } else if recurse_disallow_markers {
-                    // println!("Disallowed markers before: {:?}", new_disallowed_markers);
-                    add_disallowed_marker(&mut new_disallowed_markers, cur_parse_marker)
-                        .ok()?;
-                    // println!(
-                    //     "Recursing from dynamic array loop: {:?}",
-                    //     new_disallowed_markers
-                    // );
-                    return generate_token(
-                        parse_marker.clone(),
-                        chunks.clone(),
-                        new_disallowed_markers.clone(),
-                        recurse_disallow_markers,
-                    );
                 } else {
-                    // println!("Return None for dynamic offset loop");
-                    return None;
+                    if recurse_disallow_markers {
+                        // println!("Disallowed markers before: {:?}", new_disallowed_markers);
+                        add_disallowed_marker(&mut new_disallowed_markers, &cur_parse_marker)
+                            .ok()?;
+                        // println!(
+                        //     "Recursing from dynamic array loop: {:?}",
+                        //     new_disallowed_markers
+                        // );
+                        return generate_token(
+                            parse_marker.clone(),
+                            chunks.clone(),
+                            new_disallowed_markers.clone(),
+                            recurse_disallow_markers,
+                        );
+                    } else {
+                        // println!("Return None for dynamic offset loop");
+                        return None;
+                    }
                 }
             }
             // println!(
@@ -296,17 +301,19 @@ pub fn generate_token(
                 // );
                 if result.is_some() {
                     tokens.push(result.unwrap().to_token());
-                } else if recurse_disallow_markers {
-                    add_disallowed_marker(&mut new_disallowed_markers, &parse_marker).ok()?;
-                    // println!("Recursing from top level loop");
-                    return generate_token(
-                        ParseMarker::TopLevel,
-                        chunks.clone(),
-                        new_disallowed_markers.clone(),
-                        recurse_disallow_markers,
-                    );
                 } else {
-                    return None;
+                    if recurse_disallow_markers {
+                        add_disallowed_marker(&mut new_disallowed_markers, &parse_marker).ok()?;
+                        // println!("Recursing from top level loop");
+                        return generate_token(
+                            ParseMarker::TopLevel,
+                            chunks.clone(),
+                            new_disallowed_markers.clone(),
+                            recurse_disallow_markers,
+                        );
+                    } else {
+                        return None;
+                    }
                 }
             }
 
@@ -326,7 +333,7 @@ pub fn generate_token(
     // println!("with disallowed_markers {:?}", disallowed_markers);
     // println!("Result: {:?}", result);
     // println!("");
-    result
+    return result;
 }
 
 fn add_disallowed_marker(
@@ -363,39 +370,39 @@ fn strip_invalid_tokens(
     recurse_disallow_markers: bool,
 ) -> Option<TokenOrTopLevel> {
     // println!("Strip invalid tokens - token: {:?}", token);
-    let invalid_token_markers = get_invalid_token_markers(parse_markers, &tokens);
+    let invalid_token_markers = get_invalid_token_markers(&parse_markers, &tokens);
     // println!("invalid_token_markers: {:?}", invalid_token_markers);
-    if !invalid_token_markers.is_empty() {
+    if invalid_token_markers.len() > 0 {
         // println!("Invalid token in parse_marker: {:?}", parse_marker);
         // println!("Invalid token markers {:?}", invalid_token_markers);
         // println!("disallowed_markers: {:?}", disallowed_markers);
         if recurse_disallow_markers {
             let result = rerun_with_invalid_token_markers(
-                parse_marker,
+                &parse_marker,
                 &invalid_token_markers,
-                disallowed_markers,
-                data_to_parse,
+                &disallowed_markers,
+                &data_to_parse,
                 false,
             );
 
             if result.is_some() {
-                result
+                return result;
             } else {
                 let result = rerun_with_invalid_token_markers(
-                    parse_marker,
+                    &parse_marker,
                     &invalid_token_markers,
-                    disallowed_markers,
-                    data_to_parse,
+                    &disallowed_markers,
+                    &data_to_parse,
                     true,
                 );
                 if result.is_some() {
-                    result
+                    return result;
                 } else {
-                    None
+                    return None;
                 }
             }
         } else {
-            None
+            return None;
         }
     } else {
         match token {
@@ -405,10 +412,10 @@ fn strip_invalid_tokens(
                     .map(|e| remove_single_element_tuples((*e).clone()))
                     .collect();
 
-                Some(TokenOrTopLevel::TopLevel(tokens))
+                return Some(TokenOrTopLevel::TopLevel(tokens));
             }
             _ => {
-                Some(token)
+                return Some(token);
             }
         }
     }
@@ -487,7 +494,7 @@ pub fn get_index(marker: &ParseMarker) -> usize {
         ParseMarker::Word(location) => *location,
         ParseMarker::Tuple(location) => location.start - 1,
         ParseMarker::DynamicBytes(_, location) => location.start - 1,
-        ParseMarker::StaticArray(_element_size, location) => location.start - 1,
+        ParseMarker::StaticArray(element_size, location) => location.start - 1,
         ParseMarker::DynamicOffset(i, _) => *i,
         ParseMarker::DynamicArray(i, _) => *i,
         ParseMarker::TopLevel => {
@@ -551,7 +558,7 @@ pub fn get_dynamic_offset_marker(
         },
     );
 
-    Some((tuple_offset, tuple_location, parse_marker))
+    return Some((tuple_offset, tuple_location, parse_marker));
 }
 
 pub fn generate_parse_markers(
@@ -594,7 +601,7 @@ pub fn generate_parse_markers(
             &mut first_tuple,
             in_dynamic_offset && i == 0,
         ) {
-            if let ParseMarker::DynamicBytes(ref _padding, ref location) = bytes_marker {
+            if let ParseMarker::DynamicBytes(ref padding, ref location) = bytes_marker {
                 // println!("Dynamic bytes marker at location: {:?} - with padding: {:?}", location, padding);
                 i = location.end;
                 parse_markers.push(bytes_marker);
@@ -611,7 +618,7 @@ pub fn generate_parse_markers(
             &mut first_tuple,
             in_dynamic_offset && i == 0,
         ) {
-            if let ParseMarker::StaticArray(_element_size, ref location) = array_marker {
+            if let ParseMarker::StaticArray(element_size, ref location) = array_marker {
                 i = location.end;
                 parse_markers.push(array_marker);
             } else if let ParseMarker::DynamicArray(_, ref locations) = array_marker {
@@ -629,7 +636,7 @@ pub fn generate_parse_markers(
     // println!("##############################");
     // println!("Parse markers: {:?}", parse_markers);
     // println!("Disallowed marker: {:?}", disallowed_markers);
-    parse_markers
+    return parse_markers;
 }
 
 fn update_tuple_variables(
@@ -682,11 +689,11 @@ fn get_dynamic_offset(
     most_recent_tuple: usize,
     data_length: usize,
 ) -> Option<usize> {
-    if U256::from_str(chunk).unwrap() > U256::from(data_length) * U256::from(32) {
+    if U256::from_str(&chunk).unwrap() > U256::from(data_length) * U256::from(32) {
         return None;
     }
 
-    let decoded_num = U256::from_str(chunk).unwrap().as_usize();
+    let decoded_num = U256::from_str(&chunk).unwrap().as_usize();
 
     if decoded_num % 32 != 0 {
         return None;
@@ -698,7 +705,7 @@ fn get_dynamic_offset(
     if offset <= i {
         return None;
     }
-    Some(offset)
+    return Some(offset);
 }
 
 fn get_array_marker(
@@ -723,9 +730,9 @@ fn get_array_marker(
         most_recent_tuple_location,
         first_tuple,
     ) {
-        Some(marker)
+        return Some(marker);
     } else {
-        get_array_marker_static(i, chunks, data_length, first_tuple)
+        return get_array_marker_static(i, chunks, data_length, first_tuple);
     }
 }
 
@@ -740,7 +747,7 @@ fn get_dynamic_bytes_marker(
         return None;
     }
     let remaining_data_length = std::cmp::min(data_length, *first_tuple - 1) - i;
-    let raw_length = U256::from_str(chunks[i]).ok()?;
+    let raw_length = U256::from_str(&chunks[i]).ok()?;
     if raw_length > U256::from(<usize>::max_value()) {
         return None;
     }
@@ -841,12 +848,12 @@ fn get_array_marker_dynamic(
     }
 
     let mut parse_marker = None;
-    let mut most_recent_tuple_offset_copy = *most_recent_tuple_offset;
-    let mut most_recent_tuple_location_copy = *most_recent_tuple_location;
-    let mut first_tuple_copy = *first_tuple;
+    let mut most_recent_tuple_offset_copy = (*most_recent_tuple_offset).clone();
+    let mut most_recent_tuple_location_copy = (*most_recent_tuple_location).clone();
+    let mut first_tuple_copy = (*first_tuple).clone();
     let mut parse_markers_copy = (*parse_markers).clone();
     let limited_chunks = &chunks[i + 1..data_length].to_vec();
-    if limited_chunks.is_empty() {
+    if limited_chunks.len() == 0 {
         return None;
     }
     for j in 0..length {
@@ -887,8 +894,8 @@ fn get_array_marker_dynamic(
                     return None;
                 }
                 let mut locations = Vec::new();
-                for j in parse_markers.len()..parse_markers_copy.len() {
-                    if let ParseMarker::DynamicOffset(_j, ref location) = parse_markers_copy[j] {
+                for marker in parse_markers_copy.iter().skip(parse_markers.len()) {
+                    if let ParseMarker::DynamicOffset(j, ref location) = marker {
                         locations.push(location.clone());
                     } else {
                         panic!("Invalid tuple marker");
@@ -904,7 +911,7 @@ fn get_array_marker_dynamic(
             break;
         }
     }
-    parse_marker
+    return parse_marker;
 }
 
 fn get_array_length(
@@ -914,10 +921,10 @@ fn get_array_length(
     is_dynamic: bool,
     first_tuple: &mut usize,
 ) -> Option<(usize, usize)> {
-    if U256::from_str(chunk).unwrap() + U256::from(i) > U256::from(data_length) {
+    if U256::from_str(&chunk).unwrap() + U256::from(i) > U256::from(data_length) {
         return None;
     }
-    let raw_length = U256::from_str(chunk).unwrap().as_usize();
+    let raw_length = U256::from_str(&chunk).unwrap().as_usize();
 
     // TODO: Excluding single element arrays of static content
     if raw_length == 1 && !is_dynamic {
@@ -956,13 +963,13 @@ fn get_array_length(
 }
 
 pub fn tokenize_argument(argument: &str) -> Token {
-    let trimmed_argument = argument.trim_start_matches('0');
+    let trimmed_argument = argument.trim_start_matches("0");
 
     // If word does not start with a 0 then assume it is a left aligned type (bytes)
     if trimmed_argument.len() == argument.len() {
-        let mut right_trimmed_argument = argument.trim_end_matches('0').to_owned();
+        let mut right_trimmed_argument = argument.trim_end_matches("0").to_owned();
         if right_trimmed_argument.len() % 2 == 1 {
-            right_trimmed_argument.push('0');
+            right_trimmed_argument.push_str("0");
         }
         let bytes_len = right_trimmed_argument.len() / 2;
 
@@ -983,7 +990,7 @@ pub fn tokenize_argument(argument: &str) -> Token {
     }
 
     if let Ok(token) = LenientTokenizer::tokenize(&ParamType::Uint(256), argument) {
-        token
+        return token;
     } else {
         panic!("Could not tokenize argument: {}", argument);
     }
@@ -1298,10 +1305,10 @@ mod tests {
     fn test_same_encoding(arguments: Vec<Token>) {
         println!("Arguments:");
         for argument in &arguments {
-            utils::print_parse_tree(argument, 0);
+            utils::print_parse_tree(&argument, 0);
         }
-        println!();
-        println!();
+        println!("");
+        println!("");
         let encoded_arguments = add_padding(&hex::encode(ethabi::encode(&arguments)));
 
         let chunks = chunk_data(&encoded_arguments);
@@ -1310,12 +1317,12 @@ mod tests {
                 "{}: {} - {}",
                 i,
                 chunk,
-                u64::from_str_radix(chunk.trim_start_matches('0'), 16).unwrap_or(0)
+                u64::from_str_radix(chunk.trim_start_matches("0"), 16).unwrap_or(0)
             );
         }
         let tokens = decode_chunks(chunks.clone());
         for token in &tokens {
-            utils::print_parse_tree(token, 0);
+            utils::print_parse_tree(&token, 0);
         }
         assert_eq!(tokens, arguments);
     }
@@ -1323,10 +1330,10 @@ mod tests {
     fn test_can_reencode_with_added_data_at_the_end(arguments: Vec<Token>) {
         println!("Arguments:");
         for argument in &arguments {
-            utils::print_parse_tree(argument, 0);
+            utils::print_parse_tree(&argument, 0);
         }
-        println!();
-        println!();
+        println!("");
+        println!("");
         let encoded_arguments = add_padding(&hex::encode(ethabi::encode(&arguments)));
 
         let mut chunks = chunk_data(&encoded_arguments);
@@ -1337,12 +1344,12 @@ mod tests {
                 "{}: {} - {}",
                 i,
                 chunk,
-                u64::from_str_radix(chunk.trim_start_matches('0'), 16).unwrap_or(0)
+                u64::from_str_radix(chunk.trim_start_matches("0"), 16).unwrap_or(0)
             );
         }
         let tokens = decode_chunks(chunks.clone());
         for token in &tokens {
-            utils::print_parse_tree(token, 0);
+            utils::print_parse_tree(&token, 0);
         }
         // assert_eq!(tokens, arguments);
     }
@@ -1350,10 +1357,10 @@ mod tests {
     fn test_different_encoding(arguments_and_expected_tokens: (Vec<Token>, Vec<Token>)) {
         let (arguments, expected_tokens) = arguments_and_expected_tokens;
         for argument in &arguments {
-            utils::print_parse_tree(argument, 0);
+            utils::print_parse_tree(&argument, 0);
         }
-        println!();
-        println!();
+        println!("");
+        println!("");
         let encoded_arguments = add_padding(&hex::encode(ethabi::encode(&arguments)));
 
         let chunks = chunk_data(&encoded_arguments);
@@ -1362,12 +1369,12 @@ mod tests {
                 "{}: {} - {}",
                 i,
                 chunk,
-                u64::from_str_radix(chunk.trim_start_matches('0'), 16).unwrap_or(0)
+                u64::from_str_radix(chunk.trim_start_matches("0"), 16).unwrap_or(0)
             );
         }
         let tokens = decode_chunks(chunks.clone());
         for token in &tokens {
-            utils::print_parse_tree(token, 0);
+            utils::print_parse_tree(&token, 0);
         }
         assert_eq!(tokens, expected_tokens);
     }

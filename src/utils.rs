@@ -33,7 +33,6 @@ pub fn print_parse_tree(parse_tree: &Token, indentation: usize) {
 
 pub async fn get_etherscan_contract(address: &str, domain: &str) -> Result<String> {
     let api_key = env::var("ETHERSCAN_API_KEY")
-        .ok()
         .expect("Could not get ETHERSCAN_API_KEY from environment");
 
     let abi_url = format!(
