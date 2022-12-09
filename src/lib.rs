@@ -116,6 +116,10 @@ mod tests {
             (
                 opensea_cancel_listing,
                 "0xe65afe90ca425074a68231a64c30e743878c46e0bed15307561c31d1acbce297"
+            ),
+            (
+                opensea_fullfill_multiple_orders,
+                "0x9360601719fa9c412e402dde237a384ff7517e64cb47258b775b237c8d88827f"
             )
         ]
     );
@@ -152,6 +156,7 @@ mod tests {
         assert_eq!(tokens, cleaned_expected_tokens);
     }
 
+    #[tokio::main]
     async fn can_re_encode_single_transaction(tx_hash: &str) {
         let tx_hash = tx_hash.trim_start_matches("0x");
         let arguments_encoded = decoder::add_padding(&get_encoded_arguments(tx_hash).await);
