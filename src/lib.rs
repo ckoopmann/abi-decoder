@@ -145,7 +145,7 @@ mod tests {
     #[tokio::main]
     #[test]
     async fn can_re_encode_transactions() {
-        let start_block = 16137001;
+        let start_block = 16137000;
         let num_blocks = 1;
         let provider = Provider::<Http>::try_from(
             "https://mainnet.infura.io/v3/c60b0bb42f8a4c6481ecd229eddaca27"
