@@ -98,9 +98,13 @@ mod tests {
                 zeroex_exchange_issuance,
                 "0x001f464ec829d10f87c77c6589dff342fb36873a8e59a0ad21a102f8a50576f9"
             ),
+            // These opensea transactions contain extra data appeneded after the encoded_arguments which
+            // will always mess up this algorithm
             // (
-            //     // This transaction contains extra data appeneded after the encoded_arguments which
-            //     // will always mess up this algorithm
+            //     nft_bulk_transfer, 
+            //     "0x32cf9e754e4e2400886bb9119130de3c826132921cd444ad882efe670f29cc23"
+            // )
+            // (
             //     cockpunch_mint_with_trailing_bytes,
             //     "a848faf90566f79928e8a01cf483f2f1e899fced845e9e5cc164b79a295becd5"
             // )
@@ -112,12 +116,16 @@ mod tests {
         let tx_hash = tx_hash.trim_start_matches("0x");
         let expected_tokens = utils::remove_single_top_level_tuple(decode_tx_via_etherscan(tx_hash).await.unwrap());
 
-        let arguments_encoded = get_encoded_arguments(tx_hash).await;
-        let expected_tokens_reencoded = hex::encode(ethabi::encode(&expected_tokens));
-        println!("Checking reencoded tokens");
-        assert_eq!(arguments_encoded, expected_tokens_reencoded);
+        // let expected_tokens_reencoded = hex::encode(ethabi::encode(&expected_tokens));
+        // println!("Checking reencoded tokens");
+        // assert_eq!(arguments_encoded, expected_tokens_reencoded);
+
 
         let tokens = decode_transaction_calldata(tx_hash).await;
+
+        let arguments_encoded = decoder::add_padding(&get_encoded_arguments(tx_hash).await);
+        print_chunked_data("#### ENCODED ARGUMENTS ####", &arguments_encoded);
+
         println!("");
         println!("#### Expected Tokens ####");
         for token in &expected_tokens {
@@ -135,10 +143,10 @@ mod tests {
     }
 
     #[tokio::main]
-    // #[test]
+    #[test]
     async fn can_re_encode_transactions() {
         let start_block = 16137000;
-        let num_blocks = 2;
+        let num_blocks = 1;
         let provider = Provider::<Http>::try_from(
             "https://mainnet.infura.io/v3/c60b0bb42f8a4c6481ecd229eddaca27"
         ).expect("could not instantiate HTTP Provider");
@@ -151,9 +159,19 @@ mod tests {
                 let tx_hash = hex::encode(tx.hash.0.to_vec());
                 println!("Decoding tx: {}", tx_hash);
                 let tokens = decode_transaction_calldata(&tx_hash).await;
+                println!("");
+                println!("#### Decoded Tokens ####");
+                for token in &tokens {
+                    utils::print_parse_tree(&token, 0);
+                }
+                println!("### DONE ##");
                 let tokens_reencoded = hex::encode(ethabi::encode(&tokens));
+                println!("Reencoded tokens length: {}", tokens_reencoded.len());
+                print_chunked_data("#### RE-ENCODED ARGUMENTS ####", &tokens_reencoded);
                 let calldata = hex::encode(&tx.input.0);
-                let encoded_arguments = split_off_encoded_arguments(&calldata);
+                let encoded_arguments = decoder::add_padding(split_off_encoded_arguments(&calldata));
+                println!("Encoded arguments length: {}", encoded_arguments.len());
+                print_chunked_data("#### ENCODED ARGUMENTS ####", &encoded_arguments);
                 assert_eq!(tokens_reencoded, encoded_arguments);
             }
         }
@@ -182,5 +200,13 @@ async fn decode_tx_via_etherscan(tx_hash: &str) -> Option<Vec<Token>> {
             }
         }
         None
+}
+
+fn print_chunked_data(label: &str, data: &str) {
+    println!("{}", label);
+    let chunks = decoder::chunk_data(data);
+    for (i, chunk) in chunks.iter().enumerate() {
+        println!("{}: {} - {}", i, chunk, u64::from_str_radix(chunk.trim_start_matches("0"), 16).unwrap_or(0));
+    }
 }
 
