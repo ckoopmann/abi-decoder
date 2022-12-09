@@ -98,16 +98,21 @@ mod tests {
                 zeroex_exchange_issuance,
                 "0x001f464ec829d10f87c77c6589dff342fb36873a8e59a0ad21a102f8a50576f9"
             ),
+        ]
+    );
+    parameterize!(
+        can_re_encode_single_transaction,
+        [
             // These opensea transactions contain extra data appeneded after the encoded_arguments which
             // will always mess up this algorithm
             (
                 nft_bulk_transfer, 
                 "0x32cf9e754e4e2400886bb9119130de3c826132921cd444ad882efe670f29cc23"
             ),
-            // (
-            //     cockpunch_mint_with_trailing_bytes,
-            //     "a848faf90566f79928e8a01cf483f2f1e899fced845e9e5cc164b79a295becd5"
-            // ),
+            (
+                cockpunch_mint_with_trailing_bytes,
+                "a848faf90566f79928e8a01cf483f2f1e899fced845e9e5cc164b79a295becd5"
+            ),
             (
                 opensea_cancel_listing,
                 "0xe65afe90ca425074a68231a64c30e743878c46e0bed15307561c31d1acbce297"
@@ -147,9 +152,26 @@ mod tests {
         assert_eq!(tokens, cleaned_expected_tokens);
     }
 
+    async fn can_re_encode_single_transaction(tx_hash: &str) {
+        let tx_hash = tx_hash.trim_start_matches("0x");
+        let arguments_encoded = decoder::add_padding(&get_encoded_arguments(tx_hash).await);
+        print_chunked_data("#### ENCODED ARGUMENTS ####", &arguments_encoded);
+
+        let tokens = decode_transaction_calldata(tx_hash).await;
+        println!("#### Decoded Tokens ####");
+        for token in &tokens { utils::print_parse_tree(&token, 0);
+        }
+        println!("### DONE ##");
+        let tokens_reencoded = hex::encode(ethabi::encode(&tokens));
+        println!("Reencoded tokens length: {}", tokens_reencoded.len());
+        print_chunked_data("#### RE-ENCODED ARGUMENTS ####", &tokens_reencoded);
+
+        assert_eq!(tokens_reencoded, arguments_encoded);
+    }
+
     #[tokio::main]
-    #[test]
-    async fn can_re_encode_transactions() {
+    // #[test]
+    async fn can_re_encode_all_transactions_on_block() {
         let start_block = 16137001;
         let num_blocks = 1;
         let provider = Provider::<Http>::try_from(
