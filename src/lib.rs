@@ -1,30 +1,30 @@
 use ethabi::{Contract, Token};
-use ethereum_types::{H160, H256, U256};
-use ethers::prelude::abigen;
+
+
 use ethers::providers::{Http, Middleware, Provider};
-use hex;
+
 use std::convert::TryFrom;
-use std::str::FromStr;
-use tokio;
+
+
 
 pub mod decoder;
 pub mod utils;
 
 pub async fn decode_transaction_calldata(tx_hash: &str) -> Vec<Token> {
     let arguments_encoded = get_encoded_arguments(tx_hash).await;
-    if arguments_encoded.len() == 0 {
+    if arguments_encoded.is_empty() {
         println!("Not a valid function call");
         return Vec::new();
     }
 
-    let decoded = chunk_and_decode_data(&arguments_encoded);
-    return decoded;
+    
+    chunk_and_decode_data(&arguments_encoded)
 }
 
 pub async fn get_encoded_arguments(tx_hash: &str) -> String {
     let calldata = get_calldata(tx_hash).await;
     let arguments_encoded = split_off_encoded_arguments(&calldata);
-    return arguments_encoded.to_string();
+    arguments_encoded.to_string()
 }
 
 pub fn split_off_encoded_arguments(calldata: &str) -> &str {
@@ -32,7 +32,7 @@ pub fn split_off_encoded_arguments(calldata: &str) -> &str {
         return "";
     }
     let (_, arguments_encoded) = calldata.split_at(8);
-    return arguments_encoded;
+    arguments_encoded
 }
 
 pub async fn get_calldata(tx_hash: &str) -> String {
@@ -47,11 +47,11 @@ pub async fn get_calldata(tx_hash: &str) -> String {
         .await
         .unwrap()
         .unwrap();
-    return hex::encode(tx.input.0);
+    hex::encode(tx.input.0)
 }
 
 fn chunk_and_decode_data(encoded_arguments: &str) -> Vec<Token> {
-    if encoded_arguments.len() == 0 {
+    if encoded_arguments.is_empty() {
         return Vec::new();
     }
 
@@ -62,11 +62,11 @@ fn chunk_and_decode_data(encoded_arguments: &str) -> Vec<Token> {
             "{}: {} - {}",
             i,
             chunk,
-            u64::from_str_radix(chunk.trim_start_matches("0"), 16).unwrap_or(0)
+            u64::from_str_radix(chunk.trim_start_matches('0'), 16).unwrap_or(0)
         );
     }
-    let decoded_data = decoder::decode_chunks(chunks);
-    return decoded_data;
+    
+    decoder::decode_chunks(chunks)
 }
 
 macro_rules! parameterize {
@@ -152,17 +152,17 @@ mod tests {
         let arguments_encoded = decoder::add_padding(&get_encoded_arguments(tx_hash).await);
         print_chunked_data("#### ENCODED ARGUMENTS ####", &arguments_encoded);
 
-        println!("");
+        println!();
         println!("#### Expected Tokens ####");
         for token in &expected_tokens {
-            utils::print_parse_tree(&token, 0);
+            utils::print_parse_tree(token, 0);
         }
 
         let tokens = decode_transaction_calldata(tx_hash).await;
-        println!("");
+        println!();
         println!("#### Decoded Tokens ####");
         for token in &tokens {
-            utils::print_parse_tree(&token, 0);
+            utils::print_parse_tree(token, 0);
         }
         println!("### DONE ##");
 
@@ -180,13 +180,13 @@ mod tests {
             utils::remove_single_top_level_tuple(decode_tx_via_etherscan(tx_hash).await.unwrap());
         println!("#### Expected Tokens ####");
         for token in &expected_tokens {
-            utils::print_parse_tree(&token, 0);
+            utils::print_parse_tree(token, 0);
         }
 
         let tokens = decode_transaction_calldata(tx_hash).await;
         println!("#### Decoded Tokens ####");
         for token in &tokens {
-            utils::print_parse_tree(&token, 0);
+            utils::print_parse_tree(token, 0);
         }
         println!("### DONE ##");
         let tokens_reencoded = hex::encode(ethabi::encode(&tokens));
@@ -227,7 +227,7 @@ mod tests {
             for (i, tx) in block.transactions.iter().enumerate() {
                 if tx.to == Some(seaport_address) {
                     println!("Tx index: {}", i);
-                    let tx_hash = hex::encode(tx.hash.0.to_vec());
+                    let tx_hash = hex::encode(tx.hash.0);
                     let calldata = hex::encode(&tx.input.0);
                     let encoded_arguments =
                         decoder::add_padding(split_off_encoded_arguments(&calldata));
@@ -239,10 +239,10 @@ mod tests {
                     println!("Encoded arguments length: {}", encoded_arguments.len());
                     println!("Decoding tx: {}", tx_hash);
                     let tokens = decode_transaction_calldata(&tx_hash).await;
-                    println!("");
+                    println!();
                     println!("#### Decoded Tokens ####");
                     for token in &tokens {
-                        utils::print_parse_tree(&token, 0);
+                        utils::print_parse_tree(token, 0);
                     }
                     println!("### DONE ##");
                     let tokens_reencoded = hex::encode(ethabi::encode(&tokens));
@@ -278,7 +278,7 @@ mod tests {
             for (i, tx) in block.transactions.iter().enumerate() {
                 if tx.to != Some(seaport_address) {
                     println!("Tx index: {}", i);
-                    let tx_hash = hex::encode(tx.hash.0.to_vec());
+                    let tx_hash = hex::encode(tx.hash.0);
                     let calldata = hex::encode(&tx.input.0);
                     let encoded_arguments =
                         decoder::add_padding(split_off_encoded_arguments(&calldata));
@@ -286,10 +286,10 @@ mod tests {
                     println!("Encoded arguments length: {}", encoded_arguments.len());
                     println!("Decoding tx: {}", tx_hash);
                     let tokens = decode_transaction_calldata(&tx_hash).await;
-                    println!("");
+                    println!();
                     println!("#### Decoded Tokens ####");
                     for token in &tokens {
-                        utils::print_parse_tree(&token, 0);
+                        utils::print_parse_tree(token, 0);
                     }
                     println!("### DONE ##");
                     let tokens_reencoded = hex::encode(ethabi::encode(&tokens));
@@ -317,13 +317,13 @@ mod tests {
             );
             for (i, tx) in block.transactions.iter().enumerate() {
                     println!("Tx index: {}", i);
-                    let tx_hash = hex::encode(tx.hash.0.to_vec());
+                    let tx_hash = hex::encode(tx.hash.0);
                     println!("Decoding tx: {}", tx_hash);
                     let tokens = decode_transaction_calldata(&tx_hash).await;
-                    println!("");
+                    println!();
                     println!("#### Decoded Tokens ####");
                     for token in &tokens {
-                        utils::print_parse_tree(&token, 0);
+                        utils::print_parse_tree(token, 0);
                     }
                     println!("### DONE ##");
                     let tokens_reencoded = hex::encode(ethabi::encode(&tokens));
@@ -378,7 +378,7 @@ fn print_chunked_data(label: &str, data: &str) {
             "{}: {} - {}",
             i,
             chunk,
-            u64::from_str_radix(chunk.trim_start_matches("0"), 16).unwrap_or(0)
+            u64::from_str_radix(chunk.trim_start_matches('0'), 16).unwrap_or(0)
         );
     }
 }

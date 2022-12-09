@@ -1,11 +1,11 @@
 use ethabi::token::Token;
-use ethereum_types::{H160, H256, U256};
+use ethereum_types::{H160, U256};
 use eyre::Result;
 use reqwest;
-use std::{env, fs, path::Path, str::FromStr};
+use std::{env};
 
 pub fn print_with_indentation(indent: usize, s: &str) {
-    for i in 0..indent {
+    for _i in 0..indent {
         print!("    ");
     }
     println!("{}", s);
@@ -59,7 +59,7 @@ pub async fn get_etherscan_contract(address: &str, domain: &str) -> Result<Strin
 pub fn remove_single_top_level_tuple(tokens: Vec<Token>) -> Vec<Token> {
     if tokens.len() == 1 {
         if let Token::Tuple(inner_tokens) = tokens[0].clone() {
-            return inner_tokens.clone();
+            return inner_tokens;
         }
     }
     tokens
