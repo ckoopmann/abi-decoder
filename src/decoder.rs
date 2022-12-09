@@ -370,18 +370,22 @@ fn rerun_with_invalid_token_markers(
     data_to_parse: &Vec<&str>,
     recurse_disallow_markers: bool,
 ) -> Option<TokenOrTopLevel> {
-    println!("rerun_with_invalid_token_markers({:?}, {:?}, {:?}, {:?}, {:?})", parse_marker, invalid_token_markers, disallowed_markers, data_to_parse, recurse_disallow_markers);
+    // println!("rerun_with_invalid_token_markers({:?}, {:?}, {:?}, {:?}, {:?})", parse_marker, invalid_token_markers, disallowed_markers, data_to_parse, recurse_disallow_markers);
     for invalid_token_marker in invalid_token_markers {
-        let mut new_disallowed_markers = disallowed_markers.clone();
-        new_disallowed_markers.insert(invalid_token_marker.0, invalid_token_marker.1.clone());
-        let new_result = generate_token(
-            parse_marker.clone(),
-            data_to_parse.clone(),
-            new_disallowed_markers,
-            recurse_disallow_markers,
-        );
-        if new_result.is_some() {
-            return new_result;
+        if !disallowed_markers.contains_key(&invalid_token_marker.0)
+            || invalid_token_marker.1 != disallowed_markers[&invalid_token_marker.0]
+        {
+            let mut new_disallowed_markers = disallowed_markers.clone();
+            new_disallowed_markers.insert(invalid_token_marker.0, invalid_token_marker.1.clone());
+            let new_result = generate_token(
+                parse_marker.clone(),
+                data_to_parse.clone(),
+                new_disallowed_markers,
+                recurse_disallow_markers,
+            );
+            if new_result.is_some() {
+                return new_result;
+            }
         }
     }
     None
