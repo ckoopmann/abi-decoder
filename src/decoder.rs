@@ -210,25 +210,50 @@ pub fn generate_token(
             )
         }
         ParseMarker::DynamicArray(_, ref locations) => {
-            let mut parse_tree = Vec::new();
+            let mut tokens = Vec::new();
             let data_to_parse = chunks[1..].to_vec();
 
+            let mut new_disallowed_markers = disallowed_markers.clone();
             let parse_markers: Vec<ParseMarker> = locations
                 .iter()
                 .enumerate()
                 .map(|e| ParseMarker::DynamicOffset(e.0, e.1.clone()))
                 .collect();
 
-            for cur_parse_marker in parse_markers.clone() {
-                parse_tree.push(
-                    generate_token(
-                        cur_parse_marker,
-                        data_to_parse.clone(),
-                        disallowed_markers.clone(),
-                        true,
-                    )?
-                    .to_token(),
+            for cur_parse_marker in &parse_markers {
+                let result = generate_token(
+                    cur_parse_marker.clone(),
+                    data_to_parse.clone(),
+                    disallowed_markers.clone(),
+                    true,
                 );
+
+                // println!(
+                //     "Parsemarker result: {:?}",
+                //     result
+                // );
+                if result.is_some() {
+                    tokens.push(result.unwrap().to_token());
+                } else {
+                    if recurse_disallow_markers {
+                        println!("Disallowed markers before: {:?}", new_disallowed_markers);
+                        add_disallowed_marker(&mut new_disallowed_markers, &cur_parse_marker)
+                            .ok()?;
+                        println!(
+                            "Recursing from dynamic array loop: {:?}",
+                            new_disallowed_markers
+                        );
+                        return generate_token(
+                            parse_marker.clone(),
+                            chunks.clone(),
+                            new_disallowed_markers.clone(),
+                            recurse_disallow_markers,
+                        );
+                    } else {
+                        println!("Return None for dynamic offset loop");
+                        return None;
+                    }
+                }
             }
             println!(
                 "Recursing on dynamic array with disallowed_markers: {:?}",
@@ -237,8 +262,8 @@ pub fn generate_token(
             strip_invalid_tokens(
                 &parse_marker,
                 &parse_markers,
-                TokenOrTopLevel::Token(Token::Array(parse_tree.clone())),
-                parse_tree,
+                TokenOrTopLevel::Token(Token::Array(tokens.clone())),
+                tokens,
                 &disallowed_markers,
                 &chunks,
                 recurse_disallow_markers,
