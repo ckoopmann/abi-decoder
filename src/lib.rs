@@ -100,14 +100,18 @@ mod tests {
             ),
             // These opensea transactions contain extra data appeneded after the encoded_arguments which
             // will always mess up this algorithm
-            // (
-            //     nft_bulk_transfer, 
-            //     "0x32cf9e754e4e2400886bb9119130de3c826132921cd444ad882efe670f29cc23"
-            // )
+            (
+                nft_bulk_transfer, 
+                "0x32cf9e754e4e2400886bb9119130de3c826132921cd444ad882efe670f29cc23"
+            ),
             // (
             //     cockpunch_mint_with_trailing_bytes,
             //     "a848faf90566f79928e8a01cf483f2f1e899fced845e9e5cc164b79a295becd5"
-            // )
+            // ),
+            (
+                opensea_cancel_listing,
+                "0xe65afe90ca425074a68231a64c30e743878c46e0bed15307561c31d1acbce297"
+            )
         ]
     );
 
@@ -121,7 +125,6 @@ mod tests {
         // assert_eq!(arguments_encoded, expected_tokens_reencoded);
 
 
-        let tokens = decode_transaction_calldata(tx_hash).await;
 
         let arguments_encoded = decoder::add_padding(&get_encoded_arguments(tx_hash).await);
         print_chunked_data("#### ENCODED ARGUMENTS ####", &arguments_encoded);
@@ -131,6 +134,8 @@ mod tests {
         for token in &expected_tokens {
             utils::print_parse_tree(&token, 0);
         }
+
+        let tokens = decode_transaction_calldata(tx_hash).await;
         println!("");
         println!("#### Decoded Tokens ####");
         for token in &tokens {
@@ -145,7 +150,7 @@ mod tests {
     #[tokio::main]
     #[test]
     async fn can_re_encode_transactions() {
-        let start_block = 16137000;
+        let start_block = 16137001;
         let num_blocks = 1;
         let provider = Provider::<Http>::try_from(
             "https://mainnet.infura.io/v3/c60b0bb42f8a4c6481ecd229eddaca27"
