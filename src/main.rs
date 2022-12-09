@@ -1,4 +1,4 @@
-use tokio;
+
 use clap::Parser;
 
 /// Decode transaction calldata without abi
@@ -16,6 +16,6 @@ async fn main() {
 
     println!("#### Decoded Tokens ####");
     for token in &tokens {
-        abi_decoder::utils::print_parse_tree(&token, 0);
+        abi_decoder::utils::print_parse_tree(token, 0);
     }
 }
