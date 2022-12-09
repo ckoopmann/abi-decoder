@@ -249,17 +249,21 @@ pub fn generate_token(
                 if result.is_some() {
                     tokens.push(result.unwrap().to_token());
                 } else {
-                    add_disallowed_marker(&mut new_disallowed_markers, &parse_marker);
                     println!(
-                        "Recursing to top level with disallowed: {:?}",
-                        result
+                        "Adding disallow marker from loop - recurse_disallow_markers: {:?}",
+                        recurse_disallow_markers
                     );
-                    return generate_token(
-                        ParseMarker::TopLevel,
-                        chunks.clone(),
-                        new_disallowed_markers.clone(),
-                        true,
-                    );
+                    if recurse_disallow_markers {
+                        add_disallowed_marker(&mut new_disallowed_markers, &parse_marker);
+                        return generate_token(
+                            ParseMarker::TopLevel,
+                            chunks.clone(),
+                            new_disallowed_markers.clone(),
+                            recurse_disallow_markers,
+                        );
+                    } else {
+                        return None;
+                    }
                 }
             }
 
@@ -286,7 +290,6 @@ fn add_disallowed_marker(
     disallowed_markers: &mut HashMap<usize, MarkerType>,
     parse_marker: &ParseMarker,
 ) {
-    println!("Adding disallowed marker: {:?}", parse_marker);
     let index = get_index(parse_marker);
     let marker_to_add = match parse_marker {
         ParseMarker::DynamicOffset(..) | ParseMarker::Tuple(..) => MarkerType::Tuple,
@@ -297,7 +300,6 @@ fn add_disallowed_marker(
             panic!("Cannot add disallowed marker for {:?}", parse_marker);
         }
     };
-    println!("Adding marker_type: {:?} at index: {:} ", marker_to_add, index);
     disallowed_markers.insert(index, marker_to_add);
 }
 
@@ -310,7 +312,7 @@ fn strip_invalid_tokens(
     data_to_parse: &Vec<&str>,
     recurse_disallow_markers: bool,
 ) -> Option<TokenOrTopLevel> {
-    println!("Strip invalid tokens -token: {:?}", token);
+    println!("Strip invalid tokens - token: {:?}", token);
     let invalid_token_markers = get_invalid_token_markers(&parse_markers, &tokens);
     println!("invalid_token_markers: {:?}", invalid_token_markers);
     if invalid_token_markers.len() > 0 {
@@ -368,6 +370,7 @@ fn rerun_with_invalid_token_markers(
     data_to_parse: &Vec<&str>,
     recurse_disallow_markers: bool,
 ) -> Option<TokenOrTopLevel> {
+    println!("rerun_with_invalid_token_markers({:?}, {:?}, {:?}, {:?}, {:?})", parse_marker, invalid_token_markers, disallowed_markers, data_to_parse, recurse_disallow_markers);
     for invalid_token_marker in invalid_token_markers {
         let mut new_disallowed_markers = disallowed_markers.clone();
         new_disallowed_markers.insert(invalid_token_marker.0, invalid_token_marker.1.clone());
