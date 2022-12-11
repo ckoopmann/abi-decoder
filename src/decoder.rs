@@ -1039,7 +1039,14 @@ mod tests {
                 ]
             ),
             (
-                uint256_array,
+                uint256_array_simple,
+                vec![Token::Array(vec![
+                        Token::Uint(U256::from(3)),
+                        Token::Uint(U256::from(4)),
+                ])]
+            ),
+            (
+                uint256_array_nested,
                 vec![Token::Array(vec![
                     Token::Array(vec![
                         Token::Uint(U256::from(128)),
