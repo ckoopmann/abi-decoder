@@ -41,8 +41,8 @@ pub async fn get_etherscan_contract(address: &str, domain: &str) -> Result<Strin
         domain, address, api_key,
     );
     println!("ABI URL: {:?}", abi_url);
-    const max_iteration: u32 = 5;
-    for iteration in 0..max_iteration {
+    const MAX_ITERATION: u32 = 5;
+    for iteration in 0..MAX_ITERATION {
         let abi = reqwest::get(&abi_url)
             .await
             .map_err(|e| format!("Error getting ABI from etherscan: {:?}", e))?
@@ -55,7 +55,7 @@ pub async fn get_etherscan_contract(address: &str, domain: &str) -> Result<Strin
         }
 
         if abi.starts_with('{') && abi.contains("Max rate limit reached") {
-            if iteration < max_iteration {
+            if iteration < MAX_ITERATION {
                 println!(
                     "Max rate limit reached, sleeping for {} seconds",
                     2_u32.pow(iteration)
