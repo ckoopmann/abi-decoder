@@ -1,9 +1,5 @@
 on: [push, pull_request]
 
-env:
-## Sets environment variable
-  RPC_URL: SECRETS.RPC_URL
-  ETHERSCAN_API_KEY: SECRETS.ETHERSCAN_API_KEY
 
 name: CI
 
@@ -43,7 +39,9 @@ jobs:
 
       - name: Run cargo test
         uses: actions-rs/cargo@v1
-        env: 
+        env:
+          RPC_URL: SECRETS.RPC_URL
+          ETHERSCAN_API_KEY: SECRETS.ETHERSCAN_API_KEY
         with:
           command: test
 
