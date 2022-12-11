@@ -78,7 +78,7 @@ pub fn chunk_data(encoded_data: &str) -> Vec<&str> {
 }
 
 pub fn decode_chunks(chunks: Vec<&str>) -> Vec<Token> {
-    let result = parse_token(ParseMarker::TopLevel, &chunks, HashMap::new(), true);
+    let result = parse_token(&ParseMarker::TopLevel, &chunks, &HashMap::new(), true);
     if let Some(TokenOrTopLevel::TopLevel(tokens)) = result {
         tokens
     } else {
@@ -87,9 +87,9 @@ pub fn decode_chunks(chunks: Vec<&str>) -> Vec<Token> {
 }
 
 pub fn parse_token(
-    parse_marker: ParseMarker,
+    parse_marker: &ParseMarker,
     chunks: &[&str],
-    disallowed_markers: HashMap<usize, MarkerType>,
+    disallowed_markers: &HashMap<usize, MarkerType>,
     recurse_disallow_markers: bool,
 ) -> Option<TokenOrTopLevel> {
     let result = match parse_marker {
@@ -99,14 +99,14 @@ pub fn parse_token(
             Some(TokenOrTopLevel::Token(Token::Tuple(elements)))
         }
         ParseMarker::Word(location) => {
-            Some(TokenOrTopLevel::Token(tokenize_argument(chunks[location])))
+            Some(TokenOrTopLevel::Token(tokenize_argument(chunks[*location])))
         }
-        ParseMarker::DynamicBytes(padding, ref location) => {
+        ParseMarker::DynamicBytes(padding, location) => {
             let mut decoded_bytes: Vec<u8> = chunks[location.start..location.end]
                 .iter()
                 .flat_map(|chunk| hex::decode(chunk).expect("Failed to decode dynamic bytes"))
                 .collect();
-            decoded_bytes.truncate(decoded_bytes.len().saturating_sub(padding));
+            decoded_bytes.truncate(decoded_bytes.len().saturating_sub(*padding));
             Some(TokenOrTopLevel::Token(Token::Bytes(decoded_bytes)))
         }
         ParseMarker::StaticArray(element_size, ref location) => {
@@ -114,21 +114,18 @@ pub fn parse_token(
             let data_to_parse = chunks[location.start..location.end].to_vec();
             let mut i = 0;
             while i < data_to_parse.len() {
+                let new_parse_marker = if *element_size == 1 {
+                    ParseMarker::Word(i)
+                } else {
+                    ParseMarker::Tuple(Location {
+                        start: i,
+                        end: i + element_size,
+                    })
+                };
+
                 parse_tree.push(
-                    parse_token(
-                        if element_size == 1 {
-                            ParseMarker::Word(i)
-                        } else {
-                            ParseMarker::Tuple(Location {
-                                start: i,
-                                end: i + element_size,
-                            })
-                        },
-                        &data_to_parse,
-                        disallowed_markers.clone(),
-                        true,
-                    )?
-                    .to_token(),
+                    parse_token(&new_parse_marker, &data_to_parse, disallowed_markers, true)?
+                        .to_token(),
                 );
                 i += element_size;
             }
@@ -182,7 +179,6 @@ pub fn parse_token(
                 recurse_disallow_markers,
             )?;
 
-            println!("Received tokens: {:?}", tokens);
             let result = strip_invalid_tokens(
                 &parse_marker,
                 &parse_markers,
@@ -192,7 +188,6 @@ pub fn parse_token(
                 chunks,
                 recurse_disallow_markers,
             );
-            println!("Result of stripping invalid tokens: {:?}", result);
             return result;
         }
     };
@@ -205,17 +200,22 @@ fn generate_tokens(
     inner_data: &[&str],
     recurse_disallow_markers: bool,
 ) -> Option<(Vec<ParseMarker>, Vec<Token>)> {
-    println!("Running generate tokens");
-    println!("disallowed_markers: {:?}", disallowed_markers);
     let mut tokens = Vec::new();
-    let is_dynamic_offset = match outer_parse_marker { ParseMarker::DynamicOffset(..) => true, _ => false};
-    let parse_markers = generate_parse_markers(outer_parse_marker, disallowed_markers.clone(), inner_data, is_dynamic_offset);
-    println!("parse_markers: {:?}", parse_markers);
+    let is_dynamic_offset = match outer_parse_marker {
+        ParseMarker::DynamicOffset(..) => true,
+        _ => false,
+    };
+    let parse_markers = generate_parse_markers(
+        outer_parse_marker,
+        disallowed_markers.clone(),
+        inner_data,
+        is_dynamic_offset,
+    );
     for parse_marker in parse_markers.clone() {
         let result = parse_token(
-            parse_marker.clone(),
-            inner_data.clone(),
-            disallowed_markers.clone(),
+            &parse_marker,
+            inner_data,
+            disallowed_markers,
             recurse_disallow_markers,
         );
 
@@ -227,14 +227,13 @@ fn generate_tokens(
             return generate_tokens(
                 &outer_parse_marker,
                 &new_disallowed_markers,
-                inner_data.clone(),
+                inner_data,
                 recurse_disallow_markers,
             );
         } else {
             return None;
         }
     }
-    println!("Returning tokens");
     return Some((parse_markers, tokens));
 }
 
@@ -272,7 +271,6 @@ fn strip_invalid_tokens(
     recurse_disallow_markers: bool,
 ) -> Option<TokenOrTopLevel> {
     let invalid_token_markers = get_invalid_token_markers(parse_markers, &tokens);
-    println!("invalid_token_markers: {:?}", invalid_token_markers);
     if !invalid_token_markers.is_empty() {
         if recurse_disallow_markers {
             let result = rerun_with_invalid_token_markers(
@@ -331,9 +329,9 @@ fn rerun_with_invalid_token_markers(
             let mut new_disallowed_markers = disallowed_markers.clone();
             new_disallowed_markers.insert(invalid_token_marker.0, invalid_token_marker.1.clone());
             let new_result = parse_token(
-                parse_marker.clone(),
+                parse_marker,
                 data_to_parse,
-                new_disallowed_markers,
+                &new_disallowed_markers,
                 recurse_disallow_markers,
             );
             if new_result.is_some() {
@@ -450,10 +448,6 @@ pub fn get_dynamic_offset_marker(
         },
     );
 
-    println!(
-        "get_dynamic_offset_marker({:}, {:?})",
-        i, disallowed_markers
-    );
     Some((tuple_offset, tuple_location, parse_marker))
 }
 
