@@ -6,7 +6,6 @@ use hex;
 
 use std::collections::HashMap;
 
-
 use std::str::FromStr;
 
 // TODO: Array tokens of different types ?
@@ -984,7 +983,6 @@ pub fn tokenize_argument(argument: &str) -> Token {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     macro_rules! parameterize {
@@ -1007,7 +1005,10 @@ mod tests {
                 address_bytes_and_uint256,
                 vec![
                     Token::Address(
-                        ethereum_types::H160::from_str("0x7C07F7aBe10CE8e33DC6C5aD68FE033085256A84").unwrap()
+                        ethereum_types::H160::from_str(
+                            "0x7C07F7aBe10CE8e33DC6C5aD68FE033085256A84"
+                        )
+                        .unwrap()
                     ),
                     Token::FixedBytes(
                         hex::decode("7C07F7aBe10CE8e33DC6C5aD68FE033085256A").unwrap()
@@ -1019,7 +1020,10 @@ mod tests {
                 address_and_uint256,
                 vec![
                     Token::Address(
-                        ethereum_types::H160::from_str("0x7C07F7aBe10CE8e33DC6C5aD68FE033085256A84").unwrap()
+                        ethereum_types::H160::from_str(
+                            "0x7C07F7aBe10CE8e33DC6C5aD68FE033085256A84"
+                        )
+                        .unwrap()
                     ),
                     Token::Uint(U256::from(100)),
                 ]
@@ -1029,7 +1033,10 @@ mod tests {
                 vec![
                     Token::Uint(U256::from(100)),
                     Token::Address(
-                        ethereum_types::H160::from_str("0x7C07F7aBe10CE8e33DC6C5aD68FE033085256A84").unwrap()
+                        ethereum_types::H160::from_str(
+                            "0x7C07F7aBe10CE8e33DC6C5aD68FE033085256A84"
+                        )
+                        .unwrap()
                     ),
                 ]
             ),
@@ -1181,18 +1188,25 @@ mod tests {
                 iceth_issuance_copy,
                 vec![
                     Token::Address(
-                        ethereum_types::H160::from_str("0x7C07F7aBe10CE8e33DC6C5aD68FE033085256A84").unwrap()
+                        ethereum_types::H160::from_str(
+                            "0x7C07F7aBe10CE8e33DC6C5aD68FE033085256A84"
+                        )
+                        .unwrap()
                     ),
                     Token::Uint(U256::from(10000000000_u64)),
                     Token::Tuple(vec![
                         Token::Array(vec![
                             Token::Address(
-                                ethereum_types::H160::from_str("0x7C07F7aBe10CE8e33DC6C5aD68FE033085256A84")
-                                    .unwrap()
+                                ethereum_types::H160::from_str(
+                                    "0x7C07F7aBe10CE8e33DC6C5aD68FE033085256A84"
+                                )
+                                .unwrap()
                             ),
                             Token::Address(
-                                ethereum_types::H160::from_str("0x7C07F7aBe10CE8e33DC6C5aD68FE033085256A84")
-                                    .unwrap()
+                                ethereum_types::H160::from_str(
+                                    "0x7C07F7aBe10CE8e33DC6C5aD68FE033085256A84"
+                                )
+                                .unwrap()
                             ),
                         ]),
                         Token::Array(vec![]),
