@@ -1,13 +1,10 @@
 use ethabi::{Contract, Token};
 use std::env;
 
-
 use ethereum_types::H160;
 use ethers::providers::Middleware;
 
 use std::convert::TryFrom;
-
-
 
 pub mod decoder;
 pub mod utils;
@@ -19,7 +16,6 @@ pub async fn decode_transaction_calldata(tx_hash: &str) -> Vec<Token> {
         return Vec::new();
     }
 
-    
     chunk_and_decode_data(&arguments_encoded)
 }
 
@@ -232,7 +228,7 @@ mod tests {
                     let encoded_arguments =
                         decoder::add_padding(split_off_encoded_arguments(&calldata));
                     print_chunked_data("#### ENCODED ARGUMENTS ####", &encoded_arguments);
-                    if encoded_arguments.len() > max_calldata_size  {
+                    if encoded_arguments.len() > max_calldata_size {
                         println!("Skipping transaction with huge calldata: {}", tx_hash);
                         continue;
                     }
@@ -310,25 +306,25 @@ mod tests {
                 block.transactions.len()
             );
             for (i, tx) in block.transactions.iter().enumerate() {
-                    println!("Tx index: {}", i);
-                    let tx_hash = hex::encode(tx.hash.0);
-                    println!("Decoding tx: {}", tx_hash);
-                    let tokens = decode_transaction_calldata(&tx_hash).await;
-                    println!();
-                    println!("#### Decoded Tokens ####");
-                    for token in &tokens {
-                        utils::print_parse_tree(token, 0);
-                    }
-                    println!("### DONE ##");
-                    let tokens_reencoded = hex::encode(ethabi::encode(&tokens));
-                    println!("Reencoded tokens length: {}", tokens_reencoded.len());
-                    print_chunked_data("#### RE-ENCODED ARGUMENTS ####", &tokens_reencoded);
-                    let calldata = hex::encode(&tx.input.0);
-                    let encoded_arguments =
-                        decoder::add_padding(split_off_encoded_arguments(&calldata));
-                    println!("Encoded arguments length: {}", encoded_arguments.len());
-                    print_chunked_data("#### ENCODED ARGUMENTS ####", &encoded_arguments);
-                    assert_eq!(tokens_reencoded, encoded_arguments);
+                println!("Tx index: {}", i);
+                let tx_hash = hex::encode(tx.hash.0);
+                println!("Decoding tx: {}", tx_hash);
+                let tokens = decode_transaction_calldata(&tx_hash).await;
+                println!();
+                println!("#### Decoded Tokens ####");
+                for token in &tokens {
+                    utils::print_parse_tree(token, 0);
+                }
+                println!("### DONE ##");
+                let tokens_reencoded = hex::encode(ethabi::encode(&tokens));
+                println!("Reencoded tokens length: {}", tokens_reencoded.len());
+                print_chunked_data("#### RE-ENCODED ARGUMENTS ####", &tokens_reencoded);
+                let calldata = hex::encode(&tx.input.0);
+                let encoded_arguments =
+                    decoder::add_padding(split_off_encoded_arguments(&calldata));
+                println!("Encoded arguments length: {}", encoded_arguments.len());
+                print_chunked_data("#### ENCODED ARGUMENTS ####", &encoded_arguments);
+                assert_eq!(tokens_reencoded, encoded_arguments);
             }
         }
     }

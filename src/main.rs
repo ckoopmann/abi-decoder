@@ -3,8 +3,8 @@ use clap::Parser;
 /// Decode transaction calldata without abi
 #[derive(Parser, Debug)]
 struct Args {
-   /// Transaction whose calldata to decode
-   tx: String,
+    /// Transaction whose calldata to decode
+    tx: String,
 }
 
 #[tokio::main]

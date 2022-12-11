@@ -6,10 +6,8 @@ use hex;
 
 use std::collections::HashMap;
 
-use std::str::FromStr;
 use crate::utils;
-
-
+use std::str::FromStr;
 
 // TODO: Array tokens of different types ?
 // TODO: Array of tuples
@@ -179,8 +177,7 @@ pub fn generate_token(
                 if result.is_some() {
                     tokens.push(result.unwrap().to_token());
                 } else if recurse_disallow_markers {
-                    add_disallowed_marker(&mut new_disallowed_markers, cur_parse_marker)
-                        .ok()?;
+                    add_disallowed_marker(&mut new_disallowed_markers, cur_parse_marker).ok()?;
                     // println!("Recursing from dynamic offset loop");
                     return generate_token(
                         parse_marker.clone(),
@@ -234,8 +231,7 @@ pub fn generate_token(
                     tokens.push(result.unwrap().to_token());
                 } else if recurse_disallow_markers {
                     // println!("Disallowed markers before: {:?}", new_disallowed_markers);
-                    add_disallowed_marker(&mut new_disallowed_markers, cur_parse_marker)
-                        .ok()?;
+                    add_disallowed_marker(&mut new_disallowed_markers, cur_parse_marker).ok()?;
                     // println!(
                     //     "Recursing from dynamic array loop: {:?}",
                     //     new_disallowed_markers
@@ -408,9 +404,7 @@ fn strip_invalid_tokens(
 
                 Some(TokenOrTopLevel::TopLevel(tokens))
             }
-            _ => {
-                Some(token)
-            }
+            _ => Some(token),
         }
     }
 }
@@ -1041,8 +1035,8 @@ mod tests {
             (
                 uint256_array_simple,
                 vec![Token::Array(vec![
-                        Token::Uint(U256::from(3)),
-                        Token::Uint(U256::from(4)),
+                    Token::Uint(U256::from(3)),
+                    Token::Uint(U256::from(4)),
                 ])]
             ),
             (
@@ -1241,38 +1235,39 @@ mod tests {
 
     parameterize!(
         test_can_reencode_with_added_data_at_the_end,
-        [(
-            array_of_static_tuples_nested_with_extra_data,
-            vec![Token::Array(vec![
-                Token::Tuple(vec![
-                    Token::Array(vec![
-                        Token::Tuple(vec![
-                            Token::Uint(U256::from(128)),
-                            Token::Uint(U256::from(1024)),
+        [
+            (
+                array_of_static_tuples_nested_with_extra_data,
+                vec![Token::Array(vec![
+                    Token::Tuple(vec![
+                        Token::Array(vec![
+                            Token::Tuple(vec![
+                                Token::Uint(U256::from(128)),
+                                Token::Uint(U256::from(1024)),
+                            ]),
+                            Token::Tuple(vec![
+                                Token::Uint(U256::from(128)),
+                                Token::Uint(U256::from(1024)),
+                            ]),
                         ]),
-                        Token::Tuple(vec![
-                            Token::Uint(U256::from(128)),
-                            Token::Uint(U256::from(1024)),
-                        ]),
+                        Token::Uint(U256::from(128)),
                     ]),
-                    Token::Uint(U256::from(128)),
-                ]),
-                Token::Tuple(vec![
-                    Token::Array(vec![
-                        Token::Tuple(vec![
-                            Token::Uint(U256::from(123)),
-                            Token::Uint(U256::from(456)),
+                    Token::Tuple(vec![
+                        Token::Array(vec![
+                            Token::Tuple(vec![
+                                Token::Uint(U256::from(123)),
+                                Token::Uint(U256::from(456)),
+                            ]),
+                            Token::Tuple(vec![
+                                Token::Uint(U256::from(690)),
+                                Token::Uint(U256::from(420)),
+                            ]),
                         ]),
-                        Token::Tuple(vec![
-                            Token::Uint(U256::from(690)),
-                            Token::Uint(U256::from(420)),
-                        ]),
+                        Token::Uint(U256::from(1)),
                     ]),
-                    Token::Uint(U256::from(1)),
-                ]),
-            ]),]
-        ),
-                    (
+                ]),]
+            ),
+            (
                 array_of_arrays_with_extra_data,
                 vec![Token::Array(vec![
                     Token::Array(vec![
@@ -1299,7 +1294,6 @@ mod tests {
                     ])
                 ]),]
             ),
-
         ]
     );
 
