@@ -40,8 +40,8 @@ jobs:
       - name: Run cargo test
         uses: actions-rs/cargo@v1
         env:
-          RPC_URL: SECRETS.RPC_URL
-          ETHERSCAN_API_KEY: SECRETS.ETHERSCAN_API_KEY
+          FORK_URL: ${{ secrets.FORK_URL }}
+          CRONOSSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY}}
         with:
           command: test
 
