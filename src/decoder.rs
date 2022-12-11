@@ -226,7 +226,7 @@ pub fn parse_token(
             let parse_markers = generate_parse_markers(disallowed_markers.clone(), chunks, false);
             let mut new_disallowed_markers = disallowed_markers.clone();
             for parse_marker in parse_markers.clone() {
-                let result = generate_token(
+                let result = parse_token(
                     parse_marker.clone(),
                     chunks,
                     disallowed_markers.clone(),
@@ -237,7 +237,7 @@ pub fn parse_token(
                     tokens.push(wrapped_token.to_token());
                 } else if recurse_disallow_markers {
                     add_disallowed_marker(&mut new_disallowed_markers, &parse_marker).ok()?;
-                    return generate_token(
+                    return parse_token(
                         ParseMarker::TopLevel,
                         chunks,
                         new_disallowed_markers.clone(),
