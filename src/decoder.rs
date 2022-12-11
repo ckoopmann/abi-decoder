@@ -222,9 +222,9 @@ pub fn parse_token(
         }
         ParseMarker::TopLevel => {
             let (parse_markers, tokens) = generate_tokens(
-                parse_marker.clone(),
-                disallowed_markers.clone(),
-                chunks.clone(),
+                &parse_marker,
+                &disallowed_markers,
+                &chunks,
                 recurse_disallow_markers,
             )?;
 
@@ -246,8 +246,8 @@ pub fn parse_token(
 }
 
 fn generate_tokens(
-    outer_parse_marker: ParseMarker,
-    disallowed_markers: HashMap<usize, MarkerType>,
+    outer_parse_marker: &ParseMarker,
+    disallowed_markers: &HashMap<usize, MarkerType>,
     inner_data: &[&str],
     recurse_disallow_markers: bool,
 ) -> Option<(Vec<ParseMarker>, Vec<Token>)> {
@@ -270,8 +270,8 @@ fn generate_tokens(
             let mut new_disallowed_markers = disallowed_markers.clone();
             add_disallowed_marker(&mut new_disallowed_markers, &parse_marker).ok()?;
             return generate_tokens(
-                outer_parse_marker.clone(),
-                new_disallowed_markers,
+                &outer_parse_marker,
+                &new_disallowed_markers,
                 inner_data.clone(),
                 recurse_disallow_markers,
             );
