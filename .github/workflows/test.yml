@@ -1,5 +1,10 @@
 on: [push, pull_request]
 
+env:
+## Sets environment variable
+  RPC_URL: SECRETS.RPC_URL
+  ETHERSCAN_API_KEY: SECRETS.ETHERSCAN_API_KEY
+
 name: CI
 
 jobs:
