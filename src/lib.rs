@@ -65,7 +65,6 @@ fn chunk_and_decode_data(encoded_arguments: &str) -> Vec<Token> {
             u64::from_str_radix(chunk.trim_start_matches('0'), 16).unwrap_or(0)
         );
     }
-    
     decoder::decode_chunks(chunks)
 }
 

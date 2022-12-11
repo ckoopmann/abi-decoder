@@ -1,9 +1,9 @@
 use ethabi::token::Token;
 use ethereum_types::{H160, U256};
-use ethers::providers::{Http, Middleware, Provider};
+use ethers::providers::{Http, Provider};
 use eyre::Result;
 use reqwest;
-use std::{env};
+use std::env;
 
 pub fn print_with_indentation(indent: usize, s: &str) {
     for _i in 0..indent {
@@ -32,28 +32,42 @@ pub fn print_parse_tree(parse_tree: &Token, indentation: usize) {
     }
 }
 
-pub async fn get_etherscan_contract(address: &str, domain: &str) -> Result<String> {
-    let api_key = env::var("ETHERSCAN_API_KEY")
-        .expect("Could not get ETHERSCAN_API_KEY from environment");
+pub async fn get_etherscan_contract(address: &str, domain: &str) -> Result<String, String> {
+    let api_key =
+        env::var("ETHERSCAN_API_KEY").expect("Could not get ETHERSCAN_API_KEY from environment");
 
     let abi_url = format!(
         "http://api.{}/api?module=contract&action=getabi&address={:}&format=raw&apikey={}",
         domain, address, api_key,
     );
     println!("ABI URL: {:?}", abi_url);
-    let abi = reqwest::get(abi_url).await?.text().await?;
+    const max_iteration: u32 = 5;
+    for iteration in 0..max_iteration {
+        let abi = reqwest::get(&abi_url)
+            .await
+            .map_err(|e| format!("Error getting ABI from etherscan: {:?}", e))?
+            .text()
+            .await
+            .map_err(|e| format!("Error getting ABI from etherscan: {:?}", e))?;
 
-    if abi.starts_with("Contract source code not verified") {
-        eyre::bail!("Contract source code not verified: {:?}", address);
-    }
-    if abi.starts_with('{') && abi.contains("Max rate limit reached") {
-        eyre::bail!(
-            "Max rate limit reached, please use etherscan API Key for higher rate limit: {:?}",
-            address
-        );
-    }
+        if abi.starts_with("Contract source code not verified") {
+            return Err("Contract source code not verified".to_string());
+        }
 
-    Ok(abi)
+        if abi.starts_with('{') && abi.contains("Max rate limit reached") {
+            if iteration < max_iteration {
+                println!(
+                    "Max rate limit reached, sleeping for {} seconds",
+                    2_u32.pow(iteration)
+                );
+                std::thread::sleep(std::time::Duration::from_secs(2_u32.pow(iteration).into()));
+                continue;
+            }
+            return Err("max backoff reached".to_string());
+        }
+        return Ok(abi);
+    }
+    return Err("max iteration is zero".to_string());
 }
 
 pub fn remove_single_top_level_tuple(tokens: Vec<Token>) -> Vec<Token> {
