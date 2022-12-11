@@ -59,7 +59,11 @@ fn chunk_and_decode_data(encoded_arguments: &str) -> Vec<Token> {
     decoder::decode_chunks(chunks)
 }
 
-macro_rules! parameterize {
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    macro_rules! parameterize {
     ($test_fn:expr, [$(($name:ident, $input:expr)), * $(,)? ]) => {
         $(
             #[test]
@@ -69,10 +73,6 @@ macro_rules! parameterize {
         )*
     };
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
 
     parameterize!(
         same_decoding_as_etherscan,
@@ -136,8 +136,9 @@ mod tests {
     #[tokio::main]
     async fn same_decoding_as_etherscan(tx_hash: &str) {
         let tx_hash = tx_hash.trim_start_matches("0x");
-        let expected_tokens =
-            utils::remove_single_top_level_tuple(utils::decode_tx_via_etherscan(tx_hash).await.unwrap());
+        let expected_tokens = utils::remove_single_top_level_tuple(
+            utils::decode_tx_via_etherscan(tx_hash).await.unwrap(),
+        );
 
         // let expected_tokens_reencoded = hex::encode(ethabi::encode(&expected_tokens));
         // println!("Checking reencoded tokens");
@@ -170,8 +171,9 @@ mod tests {
         let arguments_encoded = decoder::add_padding(&get_encoded_arguments(tx_hash).await);
         utils::print_chunked_data("#### ENCODED ARGUMENTS ####", &arguments_encoded);
 
-        let expected_tokens =
-            utils::remove_single_top_level_tuple(utils::decode_tx_via_etherscan(tx_hash).await.unwrap());
+        let expected_tokens = utils::remove_single_top_level_tuple(
+            utils::decode_tx_via_etherscan(tx_hash).await.unwrap(),
+        );
         println!("#### Expected Tokens ####");
         for token in &expected_tokens {
             utils::print_parse_tree(token, 0);
@@ -201,8 +203,9 @@ mod tests {
         // Increase this value to find the smallest problematic transaction for debugging
         let max_calldata_size = 64 * 100;
         let num_blocks = 5;
-        let seaport_address =
-            ethereum_types::H160::from_slice(&hex::decode("00000000006c3852cbef3e08e8df289169ede581").unwrap());
+        let seaport_address = ethereum_types::H160::from_slice(
+            &hex::decode("00000000006c3852cbef3e08e8df289169ede581").unwrap(),
+        );
         let provider = utils::get_provider();
         for block_number in start_block..start_block + num_blocks {
             println!("Testing transactions from block: {}", block_number);
@@ -249,8 +252,9 @@ mod tests {
     async fn can_re_encode_all_transactions_not_to_seaport() {
         let start_block = 16136001;
         let num_blocks = 1;
-        let seaport_address =
-            ethereum_types::H160::from_slice(&hex::decode("00000000006c3852cbef3e08e8df289169ede581").unwrap());
+        let seaport_address = ethereum_types::H160::from_slice(
+            &hex::decode("00000000006c3852cbef3e08e8df289169ede581").unwrap(),
+        );
         let provider = utils::get_provider();
         for block_number in start_block..start_block + num_blocks {
             println!("Testing transactions from block: {}", block_number);
@@ -323,5 +327,4 @@ mod tests {
             }
         }
     }
-
 }

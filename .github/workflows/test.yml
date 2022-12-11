@@ -40,7 +40,7 @@ jobs:
       - name: Run cargo test
         uses: actions-rs/cargo@v1
         env:
-          FORK_URL: ${{ secrets.FORK_URL }}
+          RPC_URL: ${{ secrets.RPC_URL }}
           CRONOSSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY}}
         with:
           command: test

@@ -984,19 +984,20 @@ pub fn tokenize_argument(argument: &str) -> Token {
     }
 }
 
-macro_rules! parameterize {
-    ($test_fn:expr, [$(($name:ident, $input:expr)), * $(,)? ]) => {
-        $(
-            #[test]
-            fn $name() {
-                $test_fn($input);
-            }
-        )*
-    };
-}
 
 #[cfg(test)]
 mod tests {
+    macro_rules! parameterize {
+        ($test_fn:expr, [$(($name:ident, $input:expr)), * $(,)? ]) => {
+            $(
+                #[test]
+                fn $name() {
+                    $test_fn($input);
+                }
+            )*
+        };
+    }
+
     use super::*;
 
     parameterize!(
