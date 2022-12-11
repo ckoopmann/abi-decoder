@@ -1,10 +1,5 @@
-use ethabi::{Contract, Token};
-use std::env;
-
-use ethereum_types::H160;
+use ethabi::token::Token;
 use ethers::providers::Middleware;
-
-use std::convert::TryFrom;
 
 pub mod decoder;
 pub mod utils;
@@ -142,14 +137,14 @@ mod tests {
     async fn same_decoding_as_etherscan(tx_hash: &str) {
         let tx_hash = tx_hash.trim_start_matches("0x");
         let expected_tokens =
-            utils::remove_single_top_level_tuple(decode_tx_via_etherscan(tx_hash).await.unwrap());
+            utils::remove_single_top_level_tuple(utils::decode_tx_via_etherscan(tx_hash).await.unwrap());
 
         // let expected_tokens_reencoded = hex::encode(ethabi::encode(&expected_tokens));
         // println!("Checking reencoded tokens");
         // assert_eq!(arguments_encoded, expected_tokens_reencoded);
 
         let arguments_encoded = decoder::add_padding(&get_encoded_arguments(tx_hash).await);
-        print_chunked_data("#### ENCODED ARGUMENTS ####", &arguments_encoded);
+        utils::print_chunked_data("#### ENCODED ARGUMENTS ####", &arguments_encoded);
 
         println!();
         println!("#### Expected Tokens ####");
@@ -173,10 +168,10 @@ mod tests {
     async fn can_re_encode_single_transaction(tx_hash: &str) {
         let tx_hash = tx_hash.trim_start_matches("0x");
         let arguments_encoded = decoder::add_padding(&get_encoded_arguments(tx_hash).await);
-        print_chunked_data("#### ENCODED ARGUMENTS ####", &arguments_encoded);
+        utils::print_chunked_data("#### ENCODED ARGUMENTS ####", &arguments_encoded);
 
         let expected_tokens =
-            utils::remove_single_top_level_tuple(decode_tx_via_etherscan(tx_hash).await.unwrap());
+            utils::remove_single_top_level_tuple(utils::decode_tx_via_etherscan(tx_hash).await.unwrap());
         println!("#### Expected Tokens ####");
         for token in &expected_tokens {
             utils::print_parse_tree(token, 0);
@@ -190,7 +185,7 @@ mod tests {
         println!("### DONE ##");
         let tokens_reencoded = hex::encode(ethabi::encode(&tokens));
         println!("Reencoded tokens length: {}", tokens_reencoded.len());
-        print_chunked_data("#### RE-ENCODED ARGUMENTS ####", &tokens_reencoded);
+        utils::print_chunked_data("#### RE-ENCODED ARGUMENTS ####", &tokens_reencoded);
 
         assert_eq!(tokens_reencoded, arguments_encoded);
     }
@@ -207,7 +202,7 @@ mod tests {
         let max_calldata_size = 64 * 100;
         let num_blocks = 5;
         let seaport_address =
-            H160::from_slice(&hex::decode("00000000006c3852cbef3e08e8df289169ede581").unwrap());
+            ethereum_types::H160::from_slice(&hex::decode("00000000006c3852cbef3e08e8df289169ede581").unwrap());
         let provider = utils::get_provider();
         for block_number in start_block..start_block + num_blocks {
             println!("Testing transactions from block: {}", block_number);
@@ -227,7 +222,7 @@ mod tests {
                     let calldata = hex::encode(&tx.input.0);
                     let encoded_arguments =
                         decoder::add_padding(split_off_encoded_arguments(&calldata));
-                    print_chunked_data("#### ENCODED ARGUMENTS ####", &encoded_arguments);
+                    utils::print_chunked_data("#### ENCODED ARGUMENTS ####", &encoded_arguments);
                     if encoded_arguments.len() > max_calldata_size {
                         println!("Skipping transaction with huge calldata: {}", tx_hash);
                         continue;
@@ -243,7 +238,7 @@ mod tests {
                     println!("### DONE ##");
                     let tokens_reencoded = hex::encode(ethabi::encode(&tokens));
                     println!("Reencoded tokens length: {}", tokens_reencoded.len());
-                    print_chunked_data("#### RE-ENCODED ARGUMENTS ####", &tokens_reencoded);
+                    utils::print_chunked_data("#### RE-ENCODED ARGUMENTS ####", &tokens_reencoded);
                     assert_eq!(tokens_reencoded, encoded_arguments);
                 }
             }
@@ -255,7 +250,7 @@ mod tests {
         let start_block = 16136001;
         let num_blocks = 1;
         let seaport_address =
-            H160::from_slice(&hex::decode("00000000006c3852cbef3e08e8df289169ede581").unwrap());
+            ethereum_types::H160::from_slice(&hex::decode("00000000006c3852cbef3e08e8df289169ede581").unwrap());
         let provider = utils::get_provider();
         for block_number in start_block..start_block + num_blocks {
             println!("Testing transactions from block: {}", block_number);
@@ -275,7 +270,7 @@ mod tests {
                     let calldata = hex::encode(&tx.input.0);
                     let encoded_arguments =
                         decoder::add_padding(split_off_encoded_arguments(&calldata));
-                    print_chunked_data("#### ENCODED ARGUMENTS ####", &encoded_arguments);
+                    utils::print_chunked_data("#### ENCODED ARGUMENTS ####", &encoded_arguments);
                     println!("Encoded arguments length: {}", encoded_arguments.len());
                     println!("Decoding tx: {}", tx_hash);
                     let tokens = decode_transaction_calldata(&tx_hash).await;
@@ -287,7 +282,7 @@ mod tests {
                     println!("### DONE ##");
                     let tokens_reencoded = hex::encode(ethabi::encode(&tokens));
                     println!("Reencoded tokens length: {}", tokens_reencoded.len());
-                    print_chunked_data("#### RE-ENCODED ARGUMENTS ####", &tokens_reencoded);
+                    utils::print_chunked_data("#### RE-ENCODED ARGUMENTS ####", &tokens_reencoded);
                     assert_eq!(tokens_reencoded, encoded_arguments);
                 }
             }
@@ -318,55 +313,15 @@ mod tests {
                 println!("### DONE ##");
                 let tokens_reencoded = hex::encode(ethabi::encode(&tokens));
                 println!("Reencoded tokens length: {}", tokens_reencoded.len());
-                print_chunked_data("#### RE-ENCODED ARGUMENTS ####", &tokens_reencoded);
+                utils::print_chunked_data("#### RE-ENCODED ARGUMENTS ####", &tokens_reencoded);
                 let calldata = hex::encode(&tx.input.0);
                 let encoded_arguments =
                     decoder::add_padding(split_off_encoded_arguments(&calldata));
                 println!("Encoded arguments length: {}", encoded_arguments.len());
-                print_chunked_data("#### ENCODED ARGUMENTS ####", &encoded_arguments);
+                utils::print_chunked_data("#### ENCODED ARGUMENTS ####", &encoded_arguments);
                 assert_eq!(tokens_reencoded, encoded_arguments);
             }
         }
     }
 
-    async fn decode_tx_via_etherscan(tx_hash: &str) -> Option<Vec<Token>> {
-        let tx_hash = tx_hash.trim_start_matches("0x");
-        let provider = utils::get_provider();
-
-        let mut tx_hash_bytes: [u8; 32] = [0; 32];
-        hex::decode_to_slice(tx_hash, &mut tx_hash_bytes).expect("Decoding failed");
-        let tx = provider
-            .get_transaction(tx_hash_bytes)
-            .await
-            .unwrap()
-            .unwrap();
-
-        let contract_address = format!("0x{:}", hex::encode(tx.to.unwrap()));
-        let contract_abi = utils::get_etherscan_contract(&contract_address, "etherscan.io")
-            .await
-            .unwrap();
-        let contract = Contract::load(contract_abi.as_bytes()).unwrap();
-        let selector = &tx.input.0[0..4];
-        for function in contract.functions.values().flatten() {
-            let signature = function.short_signature();
-            if selector == signature {
-                let decoded = function.decode_input(&tx.input.0[4..]).unwrap();
-                return Some(decoded);
-            }
-        }
-        None
-    }
-
-    fn print_chunked_data(label: &str, data: &str) {
-        println!("{}", label);
-        let chunks = decoder::chunk_data(data);
-        for (i, chunk) in chunks.iter().enumerate() {
-            println!(
-                "{}: {} - {}",
-                i,
-                chunk,
-                u64::from_str_radix(chunk.trim_start_matches('0'), 16).unwrap_or(0)
-            );
-        }
-    }
 }

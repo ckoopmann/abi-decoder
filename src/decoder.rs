@@ -1,12 +1,12 @@
 use ethabi::param_type::ParamType;
 use ethabi::token::{LenientTokenizer, Token, Tokenizer};
-use ethereum_types::{H160, U256};
+use ethereum_types::U256;
 
 use hex;
 
 use std::collections::HashMap;
 
-use crate::utils;
+
 use std::str::FromStr;
 
 // TODO: Array tokens of different types ?
@@ -1006,7 +1006,7 @@ mod tests {
                 address_bytes_and_uint256,
                 vec![
                     Token::Address(
-                        H160::from_str("0x7C07F7aBe10CE8e33DC6C5aD68FE033085256A84").unwrap()
+                        ethereum_types::H160::from_str("0x7C07F7aBe10CE8e33DC6C5aD68FE033085256A84").unwrap()
                     ),
                     Token::FixedBytes(
                         hex::decode("7C07F7aBe10CE8e33DC6C5aD68FE033085256A").unwrap()
@@ -1018,7 +1018,7 @@ mod tests {
                 address_and_uint256,
                 vec![
                     Token::Address(
-                        H160::from_str("0x7C07F7aBe10CE8e33DC6C5aD68FE033085256A84").unwrap()
+                        ethereum_types::H160::from_str("0x7C07F7aBe10CE8e33DC6C5aD68FE033085256A84").unwrap()
                     ),
                     Token::Uint(U256::from(100)),
                 ]
@@ -1028,7 +1028,7 @@ mod tests {
                 vec![
                     Token::Uint(U256::from(100)),
                     Token::Address(
-                        H160::from_str("0x7C07F7aBe10CE8e33DC6C5aD68FE033085256A84").unwrap()
+                        ethereum_types::H160::from_str("0x7C07F7aBe10CE8e33DC6C5aD68FE033085256A84").unwrap()
                     ),
                 ]
             ),
@@ -1180,17 +1180,17 @@ mod tests {
                 iceth_issuance_copy,
                 vec![
                     Token::Address(
-                        H160::from_str("0x7C07F7aBe10CE8e33DC6C5aD68FE033085256A84").unwrap()
+                        ethereum_types::H160::from_str("0x7C07F7aBe10CE8e33DC6C5aD68FE033085256A84").unwrap()
                     ),
                     Token::Uint(U256::from(10000000000_u64)),
                     Token::Tuple(vec![
                         Token::Array(vec![
                             Token::Address(
-                                H160::from_str("0x7C07F7aBe10CE8e33DC6C5aD68FE033085256A84")
+                                ethereum_types::H160::from_str("0x7C07F7aBe10CE8e33DC6C5aD68FE033085256A84")
                                     .unwrap()
                             ),
                             Token::Address(
-                                H160::from_str("0x7C07F7aBe10CE8e33DC6C5aD68FE033085256A84")
+                                ethereum_types::H160::from_str("0x7C07F7aBe10CE8e33DC6C5aD68FE033085256A84")
                                     .unwrap()
                             ),
                         ]),
@@ -1300,7 +1300,7 @@ mod tests {
     fn test_same_encoding(arguments: Vec<Token>) {
         println!("Arguments:");
         for argument in &arguments {
-            utils::print_parse_tree(argument, 0);
+            crate::utils::print_parse_tree(argument, 0);
         }
         println!();
         println!();
@@ -1317,7 +1317,7 @@ mod tests {
         }
         let tokens = decode_chunks(chunks.clone());
         for token in &tokens {
-            utils::print_parse_tree(token, 0);
+            crate::utils::print_parse_tree(token, 0);
         }
         assert_eq!(tokens, arguments);
     }
@@ -1325,7 +1325,7 @@ mod tests {
     fn test_can_reencode_with_added_data_at_the_end(arguments: Vec<Token>) {
         println!("Arguments:");
         for argument in &arguments {
-            utils::print_parse_tree(argument, 0);
+            crate::utils::print_parse_tree(argument, 0);
         }
         println!();
         println!();
@@ -1344,7 +1344,7 @@ mod tests {
         }
         let tokens = decode_chunks(chunks.clone());
         for token in &tokens {
-            utils::print_parse_tree(token, 0);
+            crate::utils::print_parse_tree(token, 0);
         }
         // assert_eq!(tokens, arguments);
     }
@@ -1352,7 +1352,7 @@ mod tests {
     fn test_different_encoding(arguments_and_expected_tokens: (Vec<Token>, Vec<Token>)) {
         let (arguments, expected_tokens) = arguments_and_expected_tokens;
         for argument in &arguments {
-            utils::print_parse_tree(argument, 0);
+            crate::utils::print_parse_tree(argument, 0);
         }
         println!();
         println!();
@@ -1369,7 +1369,7 @@ mod tests {
         }
         let tokens = decode_chunks(chunks.clone());
         for token in &tokens {
-            utils::print_parse_tree(token, 0);
+            crate::utils::print_parse_tree(token, 0);
         }
         assert_eq!(tokens, expected_tokens);
     }
