@@ -216,7 +216,7 @@ fn generate_tokens(
             parse_marker.clone(),
             inner_data.clone(),
             disallowed_markers.clone(),
-            true,
+            recurse_disallow_markers,
         );
 
         if let Some(wrapped_token) = result {
