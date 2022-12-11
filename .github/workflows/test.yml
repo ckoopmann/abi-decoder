@@ -41,7 +41,7 @@ jobs:
         uses: actions-rs/cargo@v1
         env:
           RPC_URL: ${{ secrets.RPC_URL }}
-          CRONOSSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY}}
+          ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY}}
         with:
           command: test
 
