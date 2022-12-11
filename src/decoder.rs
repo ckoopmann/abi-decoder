@@ -43,7 +43,7 @@ pub enum ParseMarker {
     TopLevel,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MarkerType {
     Word,
     Array,
