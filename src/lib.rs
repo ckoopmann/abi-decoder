@@ -198,14 +198,14 @@ mod tests {
     // Opensea/Seaport transactions often are troublesome since they contain complex nested
     // data and added data after the encoded arguments. This makes it hard to decode them correctly
     #[tokio::main]
-    // #[test]
+    #[test]
     async fn can_re_encode_all_transactions_to_seaport() {
         let start_block = 16136002;
         // TODO: Transactions with very large calldata to seaport methods can cause the algorithm
         // to get stuck - investigate
         // Increase this value to find the smallest problematic transaction for debugging
         let max_calldata_size = 64 * 100;
-        let num_blocks = 10;
+        let num_blocks = 5;
         let seaport_address =
             H160::from_slice(&hex::decode("00000000006c3852cbef3e08e8df289169ede581").unwrap());
         let provider = utils::get_provider();
@@ -250,10 +250,10 @@ mod tests {
         }
     }
     #[tokio::main]
-    // #[test]
+    #[test]
     async fn can_re_encode_all_transactions_not_to_seaport() {
-        let start_block = 16136002;
-        let num_blocks = 2;
+        let start_block = 16136001;
+        let num_blocks = 1;
         let seaport_address =
             H160::from_slice(&hex::decode("00000000006c3852cbef3e08e8df289169ede581").unwrap());
         let provider = utils::get_provider();
@@ -328,45 +328,45 @@ mod tests {
             }
         }
     }
-}
 
-async fn decode_tx_via_etherscan(tx_hash: &str) -> Option<Vec<Token>> {
-    let tx_hash = tx_hash.trim_start_matches("0x");
-    let provider = utils::get_provider();
+    async fn decode_tx_via_etherscan(tx_hash: &str) -> Option<Vec<Token>> {
+        let tx_hash = tx_hash.trim_start_matches("0x");
+        let provider = utils::get_provider();
 
-    let mut tx_hash_bytes: [u8; 32] = [0; 32];
-    hex::decode_to_slice(tx_hash, &mut tx_hash_bytes).expect("Decoding failed");
-    let tx = provider
-        .get_transaction(tx_hash_bytes)
-        .await
-        .unwrap()
-        .unwrap();
+        let mut tx_hash_bytes: [u8; 32] = [0; 32];
+        hex::decode_to_slice(tx_hash, &mut tx_hash_bytes).expect("Decoding failed");
+        let tx = provider
+            .get_transaction(tx_hash_bytes)
+            .await
+            .unwrap()
+            .unwrap();
 
-    let contract_address = format!("0x{:}", hex::encode(tx.to.unwrap()));
-    let contract_abi = utils::get_etherscan_contract(&contract_address, "etherscan.io")
-        .await
-        .unwrap();
-    let contract = Contract::load(contract_abi.as_bytes()).unwrap();
-    let selector = &tx.input.0[0..4];
-    for function in contract.functions.values().flatten() {
-        let signature = function.short_signature();
-        if selector == signature {
-            let decoded = function.decode_input(&tx.input.0[4..]).unwrap();
-            return Some(decoded);
+        let contract_address = format!("0x{:}", hex::encode(tx.to.unwrap()));
+        let contract_abi = utils::get_etherscan_contract(&contract_address, "etherscan.io")
+            .await
+            .unwrap();
+        let contract = Contract::load(contract_abi.as_bytes()).unwrap();
+        let selector = &tx.input.0[0..4];
+        for function in contract.functions.values().flatten() {
+            let signature = function.short_signature();
+            if selector == signature {
+                let decoded = function.decode_input(&tx.input.0[4..]).unwrap();
+                return Some(decoded);
+            }
         }
+        None
     }
-    None
-}
 
-fn print_chunked_data(label: &str, data: &str) {
-    println!("{}", label);
-    let chunks = decoder::chunk_data(data);
-    for (i, chunk) in chunks.iter().enumerate() {
-        println!(
-            "{}: {} - {}",
-            i,
-            chunk,
-            u64::from_str_radix(chunk.trim_start_matches('0'), 16).unwrap_or(0)
-        );
+    fn print_chunked_data(label: &str, data: &str) {
+        println!("{}", label);
+        let chunks = decoder::chunk_data(data);
+        for (i, chunk) in chunks.iter().enumerate() {
+            println!(
+                "{}: {} - {}",
+                i,
+                chunk,
+                u64::from_str_radix(chunk.trim_start_matches('0'), 16).unwrap_or(0)
+            );
+        }
     }
 }
