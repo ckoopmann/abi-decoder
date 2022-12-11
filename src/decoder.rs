@@ -221,34 +221,15 @@ pub fn parse_token(
             )
         }
         ParseMarker::TopLevel => {
-            let mut tokens = Vec::new();
+            let (parse_markers, tokens) = generate_tokens(
+                parse_marker.clone(),
+                disallowed_markers.clone(),
+                chunks.clone(),
+                recurse_disallow_markers,
+            )?;
 
-            let parse_markers = generate_parse_markers(disallowed_markers.clone(), chunks, false);
-            let mut new_disallowed_markers = disallowed_markers.clone();
-            for parse_marker in parse_markers.clone() {
-                let result = parse_token(
-                    parse_marker.clone(),
-                    chunks,
-                    disallowed_markers.clone(),
-                    true,
-                );
-
-                if let Some(wrapped_token) = result {
-                    tokens.push(wrapped_token.to_token());
-                } else if recurse_disallow_markers {
-                    add_disallowed_marker(&mut new_disallowed_markers, &parse_marker).ok()?;
-                    return parse_token(
-                        ParseMarker::TopLevel,
-                        chunks,
-                        new_disallowed_markers.clone(),
-                        recurse_disallow_markers,
-                    );
-                } else {
-                    return None;
-                }
-            }
-
-            strip_invalid_tokens(
+            println!("Received tokens: {:?}", tokens);
+            let result = strip_invalid_tokens(
                 &parse_marker,
                 &parse_markers,
                 TokenOrTopLevel::TopLevel(tokens.clone()),
@@ -256,10 +237,50 @@ pub fn parse_token(
                 &disallowed_markers,
                 chunks,
                 recurse_disallow_markers,
-            )
+            );
+            println!("Result of stripping invalid tokens: {:?}", result);
+            return result;
         }
     };
     result
+}
+
+fn generate_tokens(
+    outer_parse_marker: ParseMarker,
+    disallowed_markers: HashMap<usize, MarkerType>,
+    inner_data: &[&str],
+    recurse_disallow_markers: bool,
+) -> Option<(Vec<ParseMarker>, Vec<Token>)> {
+    println!("Running generate tokens");
+    println!("disallowed_markers: {:?}", disallowed_markers);
+    let mut tokens = Vec::new();
+    let parse_markers = generate_parse_markers(disallowed_markers.clone(), inner_data, false);
+    println!("parse_markers: {:?}", parse_markers);
+    for parse_marker in parse_markers.clone() {
+        let result = parse_token(
+            parse_marker.clone(),
+            inner_data.clone(),
+            disallowed_markers.clone(),
+            true,
+        );
+
+        if let Some(wrapped_token) = result {
+            tokens.push(wrapped_token.to_token());
+        } else if recurse_disallow_markers {
+            let mut new_disallowed_markers = disallowed_markers.clone();
+            add_disallowed_marker(&mut new_disallowed_markers, &parse_marker).ok()?;
+            return generate_tokens(
+                outer_parse_marker.clone(),
+                new_disallowed_markers,
+                inner_data.clone(),
+                recurse_disallow_markers,
+            );
+        } else {
+            return None;
+        }
+    }
+    println!("Returning tokens");
+    return Some((parse_markers, tokens));
 }
 
 fn add_disallowed_marker(
@@ -296,6 +317,7 @@ fn strip_invalid_tokens(
     recurse_disallow_markers: bool,
 ) -> Option<TokenOrTopLevel> {
     let invalid_token_markers = get_invalid_token_markers(parse_markers, &tokens);
+    println!("invalid_token_markers: {:?}", invalid_token_markers);
     if !invalid_token_markers.is_empty() {
         if recurse_disallow_markers {
             let result = rerun_with_invalid_token_markers(
@@ -473,6 +495,7 @@ pub fn get_dynamic_offset_marker(
         },
     );
 
+    println!("get_dynamic_offset_marker({:}, {:?})", i, disallowed_markers);
     Some((tuple_offset, tuple_location, parse_marker))
 }
 
