@@ -140,33 +140,12 @@ pub fn parse_token(
                 return None;
             }
             let data_to_parse = chunks[location.start..location.end + 1].to_vec();
-            let mut tokens = Vec::new();
-            let parse_markers =
-                generate_parse_markers(&parse_marker, disallowed_markers.clone(), &data_to_parse, true);
-            let mut new_disallowed_markers = disallowed_markers.clone();
-
-            for cur_parse_marker in &parse_markers {
-                let result = parse_token(
-                    cur_parse_marker.clone(),
-                    &data_to_parse,
-                    disallowed_markers.clone(),
-                    true,
-                );
-
-                if let Some(wrapped_token) = result {
-                    tokens.push(wrapped_token.to_token());
-                } else if recurse_disallow_markers {
-                    add_disallowed_marker(&mut new_disallowed_markers, cur_parse_marker).ok()?;
-                    return parse_token(
-                        parse_marker.clone(),
-                        chunks,
-                        new_disallowed_markers.clone(),
-                        true,
-                    );
-                } else {
-                    return None;
-                }
-            }
+            let (parse_markers, tokens) = generate_tokens(
+                &parse_marker,
+                &disallowed_markers,
+                &data_to_parse,
+                recurse_disallow_markers,
+            )?;
             strip_invalid_tokens(
                 &parse_marker,
                 &parse_markers,
@@ -229,7 +208,8 @@ fn generate_tokens(
     println!("Running generate tokens");
     println!("disallowed_markers: {:?}", disallowed_markers);
     let mut tokens = Vec::new();
-    let parse_markers = generate_parse_markers(outer_parse_marker, disallowed_markers.clone(), inner_data, false);
+    let is_dynamic_offset = match outer_parse_marker { ParseMarker::DynamicOffset(..) => true, _ => false};
+    let parse_markers = generate_parse_markers(outer_parse_marker, disallowed_markers.clone(), inner_data, is_dynamic_offset);
     println!("parse_markers: {:?}", parse_markers);
     for parse_marker in parse_markers.clone() {
         let result = parse_token(
