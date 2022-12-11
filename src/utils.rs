@@ -68,7 +68,7 @@ pub async fn get_etherscan_contract(address: &str, domain: &str) -> Result<Strin
         }
         return Ok(abi);
     }
-    return Err("max iteration is zero".to_string());
+    Err("max iteration is zero".to_string())
 }
 
 pub fn remove_single_top_level_tuple(tokens: Vec<Token>) -> Vec<Token> {
