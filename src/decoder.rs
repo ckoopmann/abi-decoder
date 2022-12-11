@@ -266,8 +266,7 @@ pub fn generate_token(
             //     "Recursing on top level with disallowed_markers: {:?}",
             //     disallowed_markers
             // );
-            let parse_markers =
-                generate_parse_markers(disallowed_markers.clone(), chunks, false);
+            let parse_markers = generate_parse_markers(disallowed_markers.clone(), chunks, false);
             let mut new_disallowed_markers = disallowed_markers.clone();
             // println!(
             //     "Looping over top level parse markers: {:?}",
