@@ -1,5 +1,6 @@
 use ethabi::token::Token;
 use ethereum_types::{H160, U256};
+use ethers::providers::{Http, Middleware, Provider};
 use eyre::Result;
 use reqwest;
 use std::{env};
@@ -92,4 +93,9 @@ pub fn replace_zero_value_with_uint_single_token(token: Token) -> Token {
         }
         _ => token,
     }
+}
+
+pub fn get_provider() -> Provider<Http> {
+    let rpc_url = env::var("RPC_URL").expect("RPC_URL must be set");
+    Provider::<Http>::try_from(rpc_url).expect("could not instantiate HTTP Provider")
 }

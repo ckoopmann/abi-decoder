@@ -1299,10 +1299,10 @@ mod tests {
     fn test_same_encoding(arguments: Vec<Token>) {
         println!("Arguments:");
         for argument in &arguments {
-            utils::print_parse_tree(&argument, 0);
+            utils::print_parse_tree(argument, 0);
         }
-        println!("");
-        println!("");
+        println!();
+        println!();
         let encoded_arguments = add_padding(&hex::encode(ethabi::encode(&arguments)));
 
         let chunks = chunk_data(&encoded_arguments);
@@ -1311,12 +1311,12 @@ mod tests {
                 "{}: {} - {}",
                 i,
                 chunk,
-                u64::from_str_radix(chunk.trim_start_matches("0"), 16).unwrap_or(0)
+                u64::from_str_radix(chunk.trim_start_matches('0'), 16).unwrap_or(0)
             );
         }
         let tokens = decode_chunks(chunks.clone());
         for token in &tokens {
-            utils::print_parse_tree(&token, 0);
+            utils::print_parse_tree(token, 0);
         }
         assert_eq!(tokens, arguments);
     }
@@ -1324,10 +1324,10 @@ mod tests {
     fn test_can_reencode_with_added_data_at_the_end(arguments: Vec<Token>) {
         println!("Arguments:");
         for argument in &arguments {
-            utils::print_parse_tree(&argument, 0);
+            utils::print_parse_tree(argument, 0);
         }
-        println!("");
-        println!("");
+        println!();
+        println!();
         let encoded_arguments = add_padding(&hex::encode(ethabi::encode(&arguments)));
 
         let mut chunks = chunk_data(&encoded_arguments);
@@ -1338,12 +1338,12 @@ mod tests {
                 "{}: {} - {}",
                 i,
                 chunk,
-                u64::from_str_radix(chunk.trim_start_matches("0"), 16).unwrap_or(0)
+                u64::from_str_radix(chunk.trim_start_matches('0'), 16).unwrap_or(0)
             );
         }
         let tokens = decode_chunks(chunks.clone());
         for token in &tokens {
-            utils::print_parse_tree(&token, 0);
+            utils::print_parse_tree(token, 0);
         }
         // assert_eq!(tokens, arguments);
     }
@@ -1351,10 +1351,10 @@ mod tests {
     fn test_different_encoding(arguments_and_expected_tokens: (Vec<Token>, Vec<Token>)) {
         let (arguments, expected_tokens) = arguments_and_expected_tokens;
         for argument in &arguments {
-            utils::print_parse_tree(&argument, 0);
+            utils::print_parse_tree(argument, 0);
         }
-        println!("");
-        println!("");
+        println!();
+        println!();
         let encoded_arguments = add_padding(&hex::encode(ethabi::encode(&arguments)));
 
         let chunks = chunk_data(&encoded_arguments);
@@ -1363,12 +1363,12 @@ mod tests {
                 "{}: {} - {}",
                 i,
                 chunk,
-                u64::from_str_radix(chunk.trim_start_matches("0"), 16).unwrap_or(0)
+                u64::from_str_radix(chunk.trim_start_matches('0'), 16).unwrap_or(0)
             );
         }
         let tokens = decode_chunks(chunks.clone());
         for token in &tokens {
-            utils::print_parse_tree(&token, 0);
+            utils::print_parse_tree(token, 0);
         }
         assert_eq!(tokens, expected_tokens);
     }

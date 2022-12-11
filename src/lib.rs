@@ -1,8 +1,9 @@
 use ethabi::{Contract, Token};
+use std::env;
 
 
 use ethereum_types::H160;
-use ethers::providers::{Http, Middleware, Provider};
+use ethers::providers::Middleware;
 
 use std::convert::TryFrom;
 
@@ -37,12 +38,10 @@ pub fn split_off_encoded_arguments(calldata: &str) -> &str {
 }
 
 pub async fn get_calldata(tx_hash: &str) -> String {
-    let provider =
-        Provider::<Http>::try_from("https://mainnet.infura.io/v3/c60b0bb42f8a4c6481ecd229eddaca27")
-            .expect("could not instantiate HTTP Provider");
     let mut tx_hash_bytes: [u8; 32] = [0; 32];
     hex::decode_to_slice(tx_hash, &mut tx_hash_bytes).expect("Decoding failed");
     println!("Getting trransaction: {:?}", tx_hash);
+    let provider = utils::get_provider();
     let tx = provider
         .get_transaction(tx_hash_bytes)
         .await
@@ -127,10 +126,10 @@ mod tests {
                 opensea_cancel_listing,
                 "0xe65afe90ca425074a68231a64c30e743878c46e0bed15307561c31d1acbce297"
             ),
-            // TODO: Transaction with huge calldata that results in infinite recursion
+            // Transaction with huge calldata that gets the algorithm stuck in infinite recursion
             // TODO: Try to reproduce with smaller example
             // (
-            //     opensea_fullfill_multiple_orders,
+            //     opensea_fullfill_multiple_orders_long,
             //     "0x9360601719fa9c412e402dde237a384ff7517e64cb47258b775b237c8d88827f"
             // ),
             (
@@ -204,7 +203,7 @@ mod tests {
     // Opensea/Seaport transactions often are troublesome since they contain complex nested
     // data and added data after the encoded arguments. This makes it hard to decode them correctly
     #[tokio::main]
-    #[test]
+    // #[test]
     async fn can_re_encode_all_transactions_to_seaport() {
         let start_block = 16136002;
         // TODO: Transactions with very large calldata to seaport methods can cause the algorithm
@@ -214,10 +213,7 @@ mod tests {
         let num_blocks = 10;
         let seaport_address =
             H160::from_slice(&hex::decode("00000000006c3852cbef3e08e8df289169ede581").unwrap());
-        let provider = Provider::<Http>::try_from(
-            "https://mainnet.infura.io/v3/c60b0bb42f8a4c6481ecd229eddaca27",
-        )
-        .expect("could not instantiate HTTP Provider");
+        let provider = utils::get_provider();
         for block_number in start_block..start_block + num_blocks {
             println!("Testing transactions from block: {}", block_number);
             let block = provider
@@ -259,16 +255,13 @@ mod tests {
         }
     }
     #[tokio::main]
-    #[test]
+    // #[test]
     async fn can_re_encode_all_transactions_not_to_seaport() {
         let start_block = 16136002;
         let num_blocks = 2;
         let seaport_address =
             H160::from_slice(&hex::decode("00000000006c3852cbef3e08e8df289169ede581").unwrap());
-        let provider = Provider::<Http>::try_from(
-            "https://mainnet.infura.io/v3/c60b0bb42f8a4c6481ecd229eddaca27",
-        )
-        .expect("could not instantiate HTTP Provider");
+        let provider = utils::get_provider();
         for block_number in start_block..start_block + num_blocks {
             println!("Testing transactions from block: {}", block_number);
             let block = provider
@@ -305,10 +298,7 @@ mod tests {
             }
         }
         let num_blocks = 1;
-        let provider = Provider::<Http>::try_from(
-            "https://mainnet.infura.io/v3/c60b0bb42f8a4c6481ecd229eddaca27",
-        )
-        .expect("could not instantiate HTTP Provider");
+        let provider = utils::get_provider();
         for block_number in start_block..start_block + num_blocks {
             println!("Testing transactions from block: {}", block_number);
             let block = provider
@@ -347,9 +337,7 @@ mod tests {
 
 async fn decode_tx_via_etherscan(tx_hash: &str) -> Option<Vec<Token>> {
     let tx_hash = tx_hash.trim_start_matches("0x");
-    let provider =
-        Provider::<Http>::try_from("https://mainnet.infura.io/v3/c60b0bb42f8a4c6481ecd229eddaca27")
-            .expect("could not instantiate HTTP Provider");
+    let provider = utils::get_provider();
 
     let mut tx_hash_bytes: [u8; 32] = [0; 32];
     hex::decode_to_slice(tx_hash, &mut tx_hash_bytes).expect("Decoding failed");
