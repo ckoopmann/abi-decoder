@@ -142,7 +142,7 @@ pub fn parse_token(
             let data_to_parse = chunks[location.start..location.end + 1].to_vec();
             let mut tokens = Vec::new();
             let parse_markers =
-                generate_parse_markers(disallowed_markers.clone(), &data_to_parse, true);
+                generate_parse_markers(&parse_marker, disallowed_markers.clone(), &data_to_parse, true);
             let mut new_disallowed_markers = disallowed_markers.clone();
 
             for cur_parse_marker in &parse_markers {
@@ -177,39 +177,14 @@ pub fn parse_token(
                 recurse_disallow_markers,
             )
         }
-        ParseMarker::DynamicArray(_, ref locations) => {
-            let mut tokens = Vec::new();
+        ParseMarker::DynamicArray(..) => {
             let data_to_parse = chunks[1..].to_vec();
-
-            let mut new_disallowed_markers = disallowed_markers.clone();
-            let parse_markers: Vec<ParseMarker> = locations
-                .iter()
-                .enumerate()
-                .map(|e| ParseMarker::DynamicOffset(e.0, e.1.clone()))
-                .collect();
-
-            for cur_parse_marker in &parse_markers {
-                let result = parse_token(
-                    cur_parse_marker.clone(),
-                    &data_to_parse,
-                    disallowed_markers.clone(),
-                    true,
-                );
-
-                if let Some(wrapped_token) = result {
-                    tokens.push(wrapped_token.to_token());
-                } else if recurse_disallow_markers {
-                    add_disallowed_marker(&mut new_disallowed_markers, cur_parse_marker).ok()?;
-                    return parse_token(
-                        parse_marker.clone(),
-                        chunks,
-                        new_disallowed_markers.clone(),
-                        recurse_disallow_markers,
-                    );
-                } else {
-                    return None;
-                }
-            }
+            let (parse_markers, tokens) = generate_tokens(
+                &parse_marker,
+                &disallowed_markers,
+                &data_to_parse,
+                recurse_disallow_markers,
+            )?;
             strip_invalid_tokens(
                 &parse_marker,
                 &parse_markers,
@@ -254,7 +229,7 @@ fn generate_tokens(
     println!("Running generate tokens");
     println!("disallowed_markers: {:?}", disallowed_markers);
     let mut tokens = Vec::new();
-    let parse_markers = generate_parse_markers(disallowed_markers.clone(), inner_data, false);
+    let parse_markers = generate_parse_markers(outer_parse_marker, disallowed_markers.clone(), inner_data, false);
     println!("parse_markers: {:?}", parse_markers);
     for parse_marker in parse_markers.clone() {
         let result = parse_token(
@@ -495,79 +470,94 @@ pub fn get_dynamic_offset_marker(
         },
     );
 
-    println!("get_dynamic_offset_marker({:}, {:?})", i, disallowed_markers);
+    println!(
+        "get_dynamic_offset_marker({:}, {:?})",
+        i, disallowed_markers
+    );
     Some((tuple_offset, tuple_location, parse_marker))
 }
 
 pub fn generate_parse_markers(
+    parent_marker: &ParseMarker,
     disallowed_markers: HashMap<usize, MarkerType>,
     chunks: &[&str],
     in_dynamic_offset: bool,
 ) -> Vec<ParseMarker> {
-    let mut parse_markers: Vec<ParseMarker> = Vec::new();
-    let mut most_recent_tuple_offset: usize = 0;
-    let mut most_recent_tuple_location: Option<usize> = None;
-    let data_length = chunks.len() - 1;
-    let mut first_tuple = <usize>::max_value();
-    let mut i = 0;
+    match parent_marker {
+        ParseMarker::DynamicArray(_, locations) => locations
+            .iter()
+            .enumerate()
+            .map(|e| ParseMarker::DynamicOffset(e.0, e.1.clone()))
+            .collect(),
+        _ => {
+            let mut parse_markers: Vec<ParseMarker> = Vec::new();
+            let mut most_recent_tuple_offset: usize = 0;
+            let mut most_recent_tuple_location: Option<usize> = None;
+            let data_length = chunks.len() - 1;
+            let mut first_tuple = <usize>::max_value();
+            let mut i = 0;
 
-    while i <= data_length && i < first_tuple {
-        if let Some((tuple_offset, tuple_location, parse_marker)) = get_dynamic_offset_marker(
-            &parse_markers,
-            i,
-            chunks,
-            most_recent_tuple_offset,
-            data_length,
-            &disallowed_markers,
-        ) {
-            update_tuple_variables(
-                &mut parse_markers,
-                tuple_offset,
-                tuple_location,
-                &mut most_recent_tuple_offset,
-                &mut most_recent_tuple_location,
-                &mut first_tuple,
-            );
-            parse_markers.push(parse_marker);
-            i += 1;
-        } else if let Some(bytes_marker) = get_dynamic_bytes_marker(
-            i,
-            chunks,
-            data_length,
-            &mut first_tuple,
-            in_dynamic_offset && i == 0,
-        ) {
-            if let ParseMarker::DynamicBytes(ref _padding, ref location) = bytes_marker {
-                i = location.end;
-                parse_markers.push(bytes_marker);
-            } else {
-                panic!("Invalid bytes marker");
+            while i <= data_length && i < first_tuple {
+                if let Some((tuple_offset, tuple_location, parse_marker)) =
+                    get_dynamic_offset_marker(
+                        &parse_markers,
+                        i,
+                        chunks,
+                        most_recent_tuple_offset,
+                        data_length,
+                        &disallowed_markers,
+                    )
+                {
+                    update_tuple_variables(
+                        &mut parse_markers,
+                        tuple_offset,
+                        tuple_location,
+                        &mut most_recent_tuple_offset,
+                        &mut most_recent_tuple_location,
+                        &mut first_tuple,
+                    );
+                    parse_markers.push(parse_marker);
+                    i += 1;
+                } else if let Some(bytes_marker) = get_dynamic_bytes_marker(
+                    i,
+                    chunks,
+                    data_length,
+                    &mut first_tuple,
+                    in_dynamic_offset && i == 0,
+                ) {
+                    if let ParseMarker::DynamicBytes(ref _padding, ref location) = bytes_marker {
+                        i = location.end;
+                        parse_markers.push(bytes_marker);
+                    } else {
+                        panic!("Invalid bytes marker");
+                    }
+                } else if let Some(array_marker) = get_array_marker(
+                    &parse_markers,
+                    i,
+                    chunks,
+                    data_length,
+                    &mut most_recent_tuple_offset,
+                    &mut most_recent_tuple_location,
+                    &mut first_tuple,
+                    in_dynamic_offset && i == 0,
+                ) {
+                    if let ParseMarker::StaticArray(_element_size, ref location) = array_marker {
+                        i = location.end;
+                        parse_markers.push(array_marker);
+                    } else if let ParseMarker::DynamicArray(_, ref locations) = array_marker {
+                        i = locations[locations.len() - 1].end;
+                        parse_markers.push(array_marker);
+                    } else {
+                        panic!("Invalid array marker");
+                    }
+                } else {
+                    parse_markers.push(ParseMarker::Word(i));
+                    i += 1;
+                }
             }
-        } else if let Some(array_marker) = get_array_marker(
-            &parse_markers,
-            i,
-            chunks,
-            data_length,
-            &mut most_recent_tuple_offset,
-            &mut most_recent_tuple_location,
-            &mut first_tuple,
-            in_dynamic_offset && i == 0,
-        ) {
-            if let ParseMarker::StaticArray(_element_size, ref location) = array_marker {
-                i = location.end;
-                parse_markers.push(array_marker);
-            } else if let ParseMarker::DynamicArray(_, ref locations) = array_marker {
-                i = locations[locations.len() - 1].end;
-                parse_markers.push(array_marker);
-            } else {
-                panic!("Invalid array marker");
-            }
-        } else {
-            parse_markers.push(ParseMarker::Word(i));
-            i += 1;
+            parse_markers
         }
     }
-    parse_markers
 }
 
 fn update_tuple_variables(
