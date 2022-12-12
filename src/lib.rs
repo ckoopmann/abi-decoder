@@ -18,9 +18,7 @@
 //!
 //! The majority of examples and code snippets in this crate assume that they are
 //! inside an async block as written above.
-#![feature(rustdoc_missing_doc_code_examples)]
 #![warn(missing_docs)]
-#![warn(rustdoc::missing_doc_code_examples)]
 use ethabi::token::Token;
 
 mod decoder;
