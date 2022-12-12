@@ -7,8 +7,11 @@ pub mod utils;
 use decoder::chunk_and_decode_data;
 use transaction_data::get_encoded_arguments;
 
-pub async fn decode_transaction_calldata(tx_hash: &str) -> Vec<Token> {
-    let arguments_encoded = get_encoded_arguments(tx_hash).await;
+pub async fn decode_transaction_calldata(
+    tx_hash: &str,
+    provider_rpc_url: Option<&str>,
+) -> Vec<Token> {
+    let arguments_encoded = get_encoded_arguments(tx_hash, provider_rpc_url).await;
     if arguments_encoded.is_empty() {
         println!("Not a valid function call");
         return Vec::new();
@@ -106,7 +109,7 @@ mod tests {
         // println!("Checking reencoded tokens");
         // assert_eq!(arguments_encoded, expected_tokens_reencoded);
 
-        let arguments_encoded = add_padding(&get_encoded_arguments(tx_hash).await);
+        let arguments_encoded = add_padding(&get_encoded_arguments(tx_hash, None).await);
         utils::print_chunked_data("#### ENCODED ARGUMENTS ####", &arguments_encoded);
 
         println!();
@@ -115,7 +118,7 @@ mod tests {
             utils::print_parse_tree(token, 0);
         }
 
-        let tokens = decode_transaction_calldata(tx_hash).await;
+        let tokens = decode_transaction_calldata(tx_hash, None).await;
         println!();
         println!("#### Decoded Tokens ####");
         for token in &tokens {
@@ -130,7 +133,7 @@ mod tests {
     #[tokio::main]
     async fn can_re_encode_single_transaction(tx_hash: &str) {
         let tx_hash = tx_hash.trim_start_matches("0x");
-        let arguments_encoded = add_padding(&get_encoded_arguments(tx_hash).await);
+        let arguments_encoded = add_padding(&get_encoded_arguments(tx_hash, None).await);
         utils::print_chunked_data("#### ENCODED ARGUMENTS ####", &arguments_encoded);
 
         let expected_tokens =
@@ -140,7 +143,7 @@ mod tests {
             utils::print_parse_tree(token, 0);
         }
 
-        let tokens = decode_transaction_calldata(tx_hash).await;
+        let tokens = decode_transaction_calldata(tx_hash, None).await;
         println!("#### Decoded Tokens ####");
         for token in &tokens {
             utils::print_parse_tree(token, 0);
@@ -167,7 +170,7 @@ mod tests {
         let seaport_address = ethereum_types::H160::from_slice(
             &hex::decode("00000000006c3852cbef3e08e8df289169ede581").unwrap(),
         );
-        let provider = get_provider();
+        let provider = get_provider(None);
         for block_number in start_block..start_block + num_blocks {
             println!("Testing transactions from block: {}", block_number);
             let block = provider
@@ -192,7 +195,7 @@ mod tests {
                     }
                     println!("Encoded arguments length: {}", encoded_arguments.len());
                     println!("Decoding tx: {}", tx_hash);
-                    let tokens = decode_transaction_calldata(&tx_hash).await;
+                    let tokens = decode_transaction_calldata(&tx_hash, None).await;
                     println!();
                     println!("#### Decoded Tokens ####");
                     for token in &tokens {
@@ -215,7 +218,7 @@ mod tests {
         let seaport_address = ethereum_types::H160::from_slice(
             &hex::decode("00000000006c3852cbef3e08e8df289169ede581").unwrap(),
         );
-        let provider = get_provider();
+        let provider = get_provider(None);
         for block_number in start_block..start_block + num_blocks {
             println!("Testing transactions from block: {}", block_number);
             let block = provider
@@ -236,7 +239,7 @@ mod tests {
                     utils::print_chunked_data("#### ENCODED ARGUMENTS ####", &encoded_arguments);
                     println!("Encoded arguments length: {}", encoded_arguments.len());
                     println!("Decoding tx: {}", tx_hash);
-                    let tokens = decode_transaction_calldata(&tx_hash).await;
+                    let tokens = decode_transaction_calldata(&tx_hash, None).await;
                     println!();
                     println!("#### Decoded Tokens ####");
                     for token in &tokens {
@@ -251,7 +254,7 @@ mod tests {
             }
         }
         let num_blocks = 1;
-        let provider = get_provider();
+        let provider = get_provider(None);
         for block_number in start_block..start_block + num_blocks {
             println!("Testing transactions from block: {}", block_number);
             let block = provider
@@ -267,7 +270,7 @@ mod tests {
                 println!("Tx index: {}", i);
                 let tx_hash = hex::encode(tx.hash.0);
                 println!("Decoding tx: {}", tx_hash);
-                let tokens = decode_transaction_calldata(&tx_hash).await;
+                let tokens = decode_transaction_calldata(&tx_hash, None).await;
                 println!();
                 println!("#### Decoded Tokens ####");
                 for token in &tokens {
@@ -288,7 +291,7 @@ mod tests {
 
     pub async fn decode_tx_via_etherscan(tx_hash: &str) -> Option<Vec<Token>> {
         let tx_hash = tx_hash.trim_start_matches("0x");
-        let provider = get_provider();
+        let provider = get_provider(None);
 
         let mut tx_hash_bytes: [u8; 32] = [0; 32];
         hex::decode_to_slice(tx_hash, &mut tx_hash_bytes).expect("Decoding failed");
