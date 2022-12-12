@@ -28,13 +28,14 @@ pub fn fixed_bytes_token_from_string(bytes: &str) -> Token {
     Token::FixedBytes(hex::decode(bytes).unwrap())
 }
 
-pub fn print_with_indentation(indent: usize, s: &str) {
+fn print_with_indentation(indent: usize, s: &str) {
     for _i in 0..indent {
         print!("    ");
     }
     println!("{}", s);
 }
 
+/// Recursively prints nested tokens with increasing identation
 pub fn print_parse_tree(parse_tree: &Token, indentation: usize) {
     match parse_tree {
         Token::Array(ref elements) => {
