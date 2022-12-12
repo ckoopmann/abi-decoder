@@ -1,10 +1,11 @@
 use ethabi::token::Token;
-use ethers::providers::Middleware;
 
-pub mod decoder;
+mod decoder;
+mod transaction_data;
 pub mod utils;
 
 use decoder::chunk_and_decode_data;
+use transaction_data::get_encoded_arguments;
 
 pub async fn decode_transaction_calldata(tx_hash: &str) -> Vec<Token> {
     let arguments_encoded = get_encoded_arguments(tx_hash).await;
@@ -16,37 +17,14 @@ pub async fn decode_transaction_calldata(tx_hash: &str) -> Vec<Token> {
     chunk_and_decode_data(&arguments_encoded)
 }
 
-pub async fn get_encoded_arguments(tx_hash: &str) -> String {
-    let calldata = get_calldata(tx_hash).await;
-    let arguments_encoded = split_off_encoded_arguments(&calldata);
-    arguments_encoded.to_string()
-}
-
-pub fn split_off_encoded_arguments(calldata: &str) -> &str {
-    if calldata.len() < 8 {
-        return "";
-    }
-    let (_, arguments_encoded) = calldata.split_at(8);
-    arguments_encoded
-}
-
-pub async fn get_calldata(tx_hash: &str) -> String {
-    let mut tx_hash_bytes: [u8; 32] = [0; 32];
-    hex::decode_to_slice(tx_hash, &mut tx_hash_bytes).expect("Decoding failed");
-    println!("Getting trransaction: {:?}", tx_hash);
-    let provider = utils::get_provider();
-    let tx = provider
-        .get_transaction(tx_hash_bytes)
-        .await
-        .unwrap()
-        .unwrap();
-    hex::encode(tx.input.0)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use decoder::preprocessing::add_padding;
+    use ethers::providers::Middleware;
+    use transaction_data::{get_provider, split_off_encoded_arguments};
+    use std::env;
+    use ethabi::{Contract, Token};
 
     macro_rules! parameterize {
         ($test_fn:expr, [$(($name:ident, $input:expr)), * $(,)? ]) => {
@@ -94,7 +72,7 @@ mod tests {
                 "0x32cf9e754e4e2400886bb9119130de3c826132921cd444ad882efe670f29cc23"
             ),
             (
-                cockpunch_mint_with_trailing_bytes,
+                opensea_nft_sale,
                 "a848faf90566f79928e8a01cf483f2f1e899fced845e9e5cc164b79a295becd5"
             ),
             (
@@ -121,9 +99,8 @@ mod tests {
     #[tokio::main]
     async fn same_decoding_as_etherscan(tx_hash: &str) {
         let tx_hash = tx_hash.trim_start_matches("0x");
-        let expected_tokens = utils::remove_single_top_level_tuple(
-            utils::decode_tx_via_etherscan(tx_hash).await.unwrap(),
-        );
+        let expected_tokens =
+            utils::remove_single_top_level_tuple(decode_tx_via_etherscan(tx_hash).await.unwrap());
 
         // let expected_tokens_reencoded = hex::encode(ethabi::encode(&expected_tokens));
         // println!("Checking reencoded tokens");
@@ -156,9 +133,8 @@ mod tests {
         let arguments_encoded = add_padding(&get_encoded_arguments(tx_hash).await);
         utils::print_chunked_data("#### ENCODED ARGUMENTS ####", &arguments_encoded);
 
-        let expected_tokens = utils::remove_single_top_level_tuple(
-            utils::decode_tx_via_etherscan(tx_hash).await.unwrap(),
-        );
+        let expected_tokens =
+            utils::remove_single_top_level_tuple(decode_tx_via_etherscan(tx_hash).await.unwrap());
         println!("#### Expected Tokens ####");
         for token in &expected_tokens {
             utils::print_parse_tree(token, 0);
@@ -191,7 +167,7 @@ mod tests {
         let seaport_address = ethereum_types::H160::from_slice(
             &hex::decode("00000000006c3852cbef3e08e8df289169ede581").unwrap(),
         );
-        let provider = utils::get_provider();
+        let provider = get_provider();
         for block_number in start_block..start_block + num_blocks {
             println!("Testing transactions from block: {}", block_number);
             let block = provider
@@ -232,14 +208,14 @@ mod tests {
         }
     }
     #[tokio::main]
-    // #[test]
+    #[test]
     async fn can_re_encode_all_transactions_not_to_seaport() {
         let start_block = 16136001;
         let num_blocks = 1;
         let seaport_address = ethereum_types::H160::from_slice(
             &hex::decode("00000000006c3852cbef3e08e8df289169ede581").unwrap(),
         );
-        let provider = utils::get_provider();
+        let provider = get_provider();
         for block_number in start_block..start_block + num_blocks {
             println!("Testing transactions from block: {}", block_number);
             let block = provider
@@ -275,7 +251,7 @@ mod tests {
             }
         }
         let num_blocks = 1;
-        let provider = utils::get_provider();
+        let provider = get_provider();
         for block_number in start_block..start_block + num_blocks {
             println!("Testing transactions from block: {}", block_number);
             let block = provider
@@ -308,5 +284,71 @@ mod tests {
                 assert_eq!(tokens_reencoded, encoded_arguments);
             }
         }
+    }
+
+    pub async fn decode_tx_via_etherscan(tx_hash: &str) -> Option<Vec<Token>> {
+        let tx_hash = tx_hash.trim_start_matches("0x");
+        let provider = get_provider();
+
+        let mut tx_hash_bytes: [u8; 32] = [0; 32];
+        hex::decode_to_slice(tx_hash, &mut tx_hash_bytes).expect("Decoding failed");
+        let tx = provider
+            .get_transaction(tx_hash_bytes)
+            .await
+            .unwrap()
+            .unwrap();
+
+        let contract_address = format!("0x{:}", hex::encode(tx.to.unwrap()));
+        let contract_abi = get_etherscan_contract(&contract_address, "etherscan.io")
+            .await
+            .unwrap();
+        let contract = Contract::load(contract_abi.as_bytes()).unwrap();
+        let selector = &tx.input.0[0..4];
+        for function in contract.functions.values().flatten() {
+            let signature = function.short_signature();
+            if selector == signature {
+                let decoded = function.decode_input(&tx.input.0[4..]).unwrap();
+                return Some(decoded);
+            }
+        }
+        None
+    }
+
+    pub async fn get_etherscan_contract(address: &str, domain: &str) -> Result<String, String> {
+        let api_key = env::var("ETHERSCAN_API_KEY")
+            .expect("Could not get ETHERSCAN_API_KEY from environment");
+
+        let abi_url = format!(
+            "http://api.{}/api?module=contract&action=getabi&address={:}&format=raw&apikey={}",
+            domain, address, api_key,
+        );
+        println!("ABI URL: {:?}", abi_url);
+        const MAX_ITERATION: u32 = 5;
+        for iteration in 0..MAX_ITERATION {
+            let abi = reqwest::get(&abi_url)
+                .await
+                .map_err(|e| format!("Error getting ABI from etherscan: {:?}", e))?
+                .text()
+                .await
+                .map_err(|e| format!("Error getting ABI from etherscan: {:?}", e))?;
+
+            if abi.starts_with("Contract source code not verified") {
+                return Err("Contract source code not verified".to_string());
+            }
+
+            if abi.starts_with('{') && abi.contains("Max rate limit reached") {
+                if iteration < MAX_ITERATION {
+                    println!(
+                        "Max rate limit reached, sleeping for {} seconds",
+                        2_u32.pow(iteration)
+                    );
+                    std::thread::sleep(std::time::Duration::from_secs(2_u32.pow(iteration).into()));
+                    continue;
+                }
+                return Err("max backoff reached".to_string());
+            }
+            return Ok(abi);
+        }
+        Err("max iteration is zero".to_string())
     }
 }
