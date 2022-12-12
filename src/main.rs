@@ -11,10 +11,10 @@ struct Args {
 async fn main() {
     let args = Args::parse();
     let tx_hash = args.tx.trim_start_matches("0x");
-    let tokens = abi_decoder::decode_transaction_calldata(tx_hash).await;
+    let tokens = abi_decoder::decode_transaction_calldata(tx_hash, None).await;
 
     println!("#### Decoded Tokens ####");
     for token in &tokens {
-        abi_decoder::utils::print_parse_tree(token, 0);
+        abi_decoder::print_parse_tree(token, 0);
     }
 }
