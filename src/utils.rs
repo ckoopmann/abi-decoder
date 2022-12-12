@@ -1,6 +1,7 @@
 use crate::decoder;
 use ethabi::Token;
 use ethereum_types::{H160, U256};
+use std::str::FromStr;
 
 pub fn print_with_indentation(indent: usize, s: &str) {
     for _i in 0..indent {
@@ -22,6 +23,10 @@ pub fn print_parse_tree(parse_tree: &Token, indentation: usize) {
             for item in elements {
                 print_parse_tree(item, indentation + 1);
             }
+        }
+        // Avoid normal bytes debug output which prints a huge array of bytes
+        Token::Bytes(ref bytes) => {
+            print_with_indentation(indentation, &format!("Bytes: {:?}", hex::encode(bytes)));
         }
         token => {
             print_with_indentation(indentation, &format!("Token: {:?}", token));
@@ -79,4 +84,8 @@ pub fn print_chunked_data(label: &str, data: &str) {
             u64::from_str_radix(chunk.trim_start_matches('0'), 16).unwrap_or(0)
         );
     }
+}
+
+pub fn address_token_from_string(address: &str) -> Token {
+    Token::Address(H160::from_str(address).unwrap())
 }
