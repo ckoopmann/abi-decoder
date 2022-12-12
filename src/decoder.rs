@@ -132,66 +132,54 @@ pub fn parse_token(
             let result = Token::Array(parse_tree);
             Some(TokenOrTopLevel::Token(result))
         }
+        _ => parse_nested_token(
+            parse_marker,
+            chunks,
+            disallowed_markers,
+            recurse_disallow_markers,
+        ),
+    };
+    result
+}
+
+fn parse_nested_token(
+    outer_parse_marker: &ParseMarker,
+    chunks: &[&str],
+    disallowed_markers: &HashMap<usize, MarkerType>,
+    recurse_disallow_markers: bool,
+) -> Option<TokenOrTopLevel> {
+    let data_to_parse = match outer_parse_marker {
+        ParseMarker::TopLevel => chunks,
+        ParseMarker::DynamicArray(..) => &chunks[1..],
         ParseMarker::DynamicOffset(_, ref location) => {
             if disallowed_markers.contains_key(&0) && disallowed_markers[&0] == MarkerType::Tuple {
                 return None;
             }
-            let data_to_parse = chunks[location.start..location.end + 1].to_vec();
-            let (parse_markers, tokens) = generate_tokens(
-                parse_marker,
-                disallowed_markers,
-                &data_to_parse,
-                recurse_disallow_markers,
-            )?;
-            strip_invalid_tokens(
-                parse_marker,
-                &parse_markers,
-                TokenOrTopLevel::Token(Token::Tuple(tokens.clone())),
-                tokens,
-                disallowed_markers,
-                chunks,
-                recurse_disallow_markers,
-            )
+            &chunks[location.start..location.end + 1]
         }
-        ParseMarker::DynamicArray(..) => {
-            let data_to_parse = chunks[1..].to_vec();
-            let (parse_markers, tokens) = generate_tokens(
-                parse_marker,
-                disallowed_markers,
-                &data_to_parse,
-                recurse_disallow_markers,
-            )?;
-            strip_invalid_tokens(
-                parse_marker,
-                &parse_markers,
-                TokenOrTopLevel::Token(Token::Array(tokens.clone())),
-                tokens,
-                disallowed_markers,
-                chunks,
-                recurse_disallow_markers,
-            )
-        }
-        ParseMarker::TopLevel => {
-            let (parse_markers, tokens) = generate_tokens(
-                parse_marker,
-                disallowed_markers,
-                chunks,
-                recurse_disallow_markers,
-            )?;
-
-            let result = strip_invalid_tokens(
-                parse_marker,
-                &parse_markers,
-                TokenOrTopLevel::TopLevel(tokens.clone()),
-                tokens,
-                disallowed_markers,
-                chunks,
-                recurse_disallow_markers,
-            );
-            return result;
-        }
+        _ => panic!("Non nested marker passed to parse_nested_token"),
     };
-    result
+    let (parse_markers, tokens) = generate_tokens(
+        outer_parse_marker,
+        disallowed_markers,
+        data_to_parse,
+        recurse_disallow_markers,
+    )?;
+    let wrapped_token = match outer_parse_marker {
+        ParseMarker::TopLevel => TokenOrTopLevel::TopLevel(tokens.clone()),
+        ParseMarker::DynamicArray(..) => TokenOrTopLevel::Token(Token::Array(tokens.clone())),
+        ParseMarker::DynamicOffset(_, _) => TokenOrTopLevel::Token(Token::Tuple(tokens.clone())),
+        _ => panic!("Non nested marker passed to parse_nested_token"),
+    };
+    strip_invalid_tokens(
+        outer_parse_marker,
+        &parse_markers,
+        wrapped_token,
+        tokens,
+        disallowed_markers,
+        chunks,
+        recurse_disallow_markers,
+    )
 }
 
 fn generate_tokens(
