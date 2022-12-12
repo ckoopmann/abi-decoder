@@ -21,12 +21,10 @@ pub enum ParseMarker {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MarkerType {
-    Word,
     Array,
     Tuple,
     DynamicArray,
     DynamicBytes,
-    TopLevel,
 }
 
 pub fn add_disallowed_marker(

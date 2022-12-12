@@ -21,10 +21,10 @@ pub async fn decode_transaction_calldata(tx_hash: &str) -> Vec<Token> {
 mod tests {
     use super::*;
     use decoder::preprocessing::add_padding;
-    use ethers::providers::Middleware;
-    use transaction_data::{get_provider, split_off_encoded_arguments};
-    use std::env;
     use ethabi::{Contract, Token};
+    use ethers::providers::Middleware;
+    use std::env;
+    use transaction_data::{get_provider, split_off_encoded_arguments};
 
     macro_rules! parameterize {
         ($test_fn:expr, [$(($name:ident, $input:expr)), * $(,)? ]) => {

@@ -32,4 +32,3 @@ pub fn get_provider() -> Provider<Http> {
     let rpc_url = env::var("RPC_URL").expect("RPC_URL must be set");
     Provider::<Http>::try_from(rpc_url).expect("could not instantiate HTTP Provider")
 }
-
