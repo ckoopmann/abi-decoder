@@ -4,6 +4,8 @@ use ethers::providers::Middleware;
 pub mod decoder;
 pub mod utils;
 
+use decoder::chunk_and_decode_data;
+
 pub async fn decode_transaction_calldata(tx_hash: &str) -> Vec<Token> {
     let arguments_encoded = get_encoded_arguments(tx_hash).await;
     if arguments_encoded.is_empty() {
@@ -41,38 +43,21 @@ pub async fn get_calldata(tx_hash: &str) -> String {
     hex::encode(tx.input.0)
 }
 
-fn chunk_and_decode_data(encoded_arguments: &str) -> Vec<Token> {
-    if encoded_arguments.is_empty() {
-        return Vec::new();
-    }
-
-    let encoded_arguments = decoder::add_padding(encoded_arguments);
-    let chunks = decoder::chunk_data(&encoded_arguments);
-    for (i, chunk) in chunks.iter().enumerate() {
-        println!(
-            "{}: {} - {}",
-            i,
-            chunk,
-            u64::from_str_radix(chunk.trim_start_matches('0'), 16).unwrap_or(0)
-        );
-    }
-    decoder::decode_chunks(chunks)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use decoder::preprocessing::add_padding;
 
     macro_rules! parameterize {
-    ($test_fn:expr, [$(($name:ident, $input:expr)), * $(,)? ]) => {
-        $(
-            #[test]
-            fn $name() {
-                $test_fn($input);
-            }
-        )*
-    };
-}
+        ($test_fn:expr, [$(($name:ident, $input:expr)), * $(,)? ]) => {
+            $(
+                #[test]
+                fn $name() {
+                    $test_fn($input);
+                }
+            )*
+        };
+    }
 
     parameterize!(
         same_decoding_as_etherscan,
@@ -144,7 +129,7 @@ mod tests {
         // println!("Checking reencoded tokens");
         // assert_eq!(arguments_encoded, expected_tokens_reencoded);
 
-        let arguments_encoded = decoder::add_padding(&get_encoded_arguments(tx_hash).await);
+        let arguments_encoded = add_padding(&get_encoded_arguments(tx_hash).await);
         utils::print_chunked_data("#### ENCODED ARGUMENTS ####", &arguments_encoded);
 
         println!();
@@ -168,7 +153,7 @@ mod tests {
     #[tokio::main]
     async fn can_re_encode_single_transaction(tx_hash: &str) {
         let tx_hash = tx_hash.trim_start_matches("0x");
-        let arguments_encoded = decoder::add_padding(&get_encoded_arguments(tx_hash).await);
+        let arguments_encoded = add_padding(&get_encoded_arguments(tx_hash).await);
         utils::print_chunked_data("#### ENCODED ARGUMENTS ####", &arguments_encoded);
 
         let expected_tokens = utils::remove_single_top_level_tuple(
@@ -223,8 +208,7 @@ mod tests {
                     println!("Tx index: {}", i);
                     let tx_hash = hex::encode(tx.hash.0);
                     let calldata = hex::encode(&tx.input.0);
-                    let encoded_arguments =
-                        decoder::add_padding(split_off_encoded_arguments(&calldata));
+                    let encoded_arguments = add_padding(split_off_encoded_arguments(&calldata));
                     utils::print_chunked_data("#### ENCODED ARGUMENTS ####", &encoded_arguments);
                     if encoded_arguments.len() > max_calldata_size {
                         println!("Skipping transaction with huge calldata: {}", tx_hash);
@@ -248,7 +232,7 @@ mod tests {
         }
     }
     #[tokio::main]
-    #[test]
+    // #[test]
     async fn can_re_encode_all_transactions_not_to_seaport() {
         let start_block = 16136001;
         let num_blocks = 1;
@@ -272,8 +256,7 @@ mod tests {
                     println!("Tx index: {}", i);
                     let tx_hash = hex::encode(tx.hash.0);
                     let calldata = hex::encode(&tx.input.0);
-                    let encoded_arguments =
-                        decoder::add_padding(split_off_encoded_arguments(&calldata));
+                    let encoded_arguments = add_padding(split_off_encoded_arguments(&calldata));
                     utils::print_chunked_data("#### ENCODED ARGUMENTS ####", &encoded_arguments);
                     println!("Encoded arguments length: {}", encoded_arguments.len());
                     println!("Decoding tx: {}", tx_hash);
@@ -319,8 +302,7 @@ mod tests {
                 println!("Reencoded tokens length: {}", tokens_reencoded.len());
                 utils::print_chunked_data("#### RE-ENCODED ARGUMENTS ####", &tokens_reencoded);
                 let calldata = hex::encode(&tx.input.0);
-                let encoded_arguments =
-                    decoder::add_padding(split_off_encoded_arguments(&calldata));
+                let encoded_arguments = add_padding(split_off_encoded_arguments(&calldata));
                 println!("Encoded arguments length: {}", encoded_arguments.len());
                 utils::print_chunked_data("#### ENCODED ARGUMENTS ####", &encoded_arguments);
                 assert_eq!(tokens_reencoded, encoded_arguments);

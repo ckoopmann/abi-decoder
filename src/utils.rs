@@ -145,7 +145,7 @@ pub async fn decode_tx_via_etherscan(tx_hash: &str) -> Option<Vec<Token>> {
 
 pub fn print_chunked_data(label: &str, data: &str) {
     println!("{}", label);
-    let chunks = decoder::chunk_data(data);
+    let chunks = decoder::preprocessing::chunk_data(data);
     for (i, chunk) in chunks.iter().enumerate() {
         println!(
             "{}: {} - {}",
