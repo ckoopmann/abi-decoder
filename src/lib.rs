@@ -4,10 +4,11 @@ mod decoder;
 #[cfg(test)]
 mod tests;
 mod transaction_data;
-pub mod utils;
+mod utils;
 
 use decoder::chunk_and_decode_data;
 use transaction_data::get_encoded_arguments;
+pub use utils::print_parse_tree;
 
 pub async fn decode_transaction_calldata(
     tx_hash: &str,

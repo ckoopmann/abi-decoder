@@ -15,6 +15,6 @@ async fn main() {
 
     println!("#### Decoded Tokens ####");
     for token in &tokens {
-        abi_decoder::utils::print_parse_tree(token, 0);
+        abi_decoder::print_parse_tree(token, 0);
     }
 }

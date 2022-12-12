@@ -1,5 +1,5 @@
 use super::*;
-use crate::parameterize;
+use crate::utils::parameterize;
 use decoder::preprocessing::add_padding;
 use ethabi::{Contract, Token};
 use ethers::providers::Middleware;

@@ -3,7 +3,6 @@ use ethabi::Token;
 use ethereum_types::{H160, U256};
 use std::str::FromStr;
 
-#[macro_export]
 macro_rules! parameterize {
         ($test_fn:expr, [$(($name:ident, $input:expr)), * $(,)? ]) => {
             $(
@@ -14,6 +13,8 @@ macro_rules! parameterize {
             )*
         };
     }
+
+pub(crate) use parameterize;
 
 pub fn address_token_from_string(address: &str) -> Token {
     Token::Address(H160::from_str(address).unwrap())
