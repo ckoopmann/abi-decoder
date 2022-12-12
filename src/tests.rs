@@ -4,6 +4,7 @@ use ethabi::{Contract, Token};
 use ethers::providers::Middleware;
 use std::env;
 use transaction_data::{get_provider, split_off_encoded_arguments};
+use crate::parameterize;
 
 mod data;
 
@@ -11,17 +12,6 @@ enum Chain {
     BSC,
     Ethereum,
 }
-
-macro_rules! parameterize {
-        ($test_fn:expr, [$(($name:ident, $input:expr)), * $(,)? ]) => {
-            $(
-                #[test]
-                fn $name() {
-                    $test_fn($input);
-                }
-            )*
-        };
-    }
 
 parameterize!(
     same_decoding_as_etherscan,

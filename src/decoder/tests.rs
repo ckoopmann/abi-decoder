@@ -1,19 +1,8 @@
 use super::*;
-use crate::utils::{address_token_from_string, fixed_bytes_token_from_string, print_parse_tree};
+use crate::{parameterize, utils::{address_token_from_string, fixed_bytes_token_from_string, print_parse_tree}};
 use ethabi::Token;
 use ethereum_types::U256;
 use hex;
-
-macro_rules! parameterize {
-        ($test_fn:expr, [$(($name:ident, $input:expr)), * $(,)? ]) => {
-            $(
-                #[test]
-                fn $name() {
-                    $test_fn($input);
-                }
-            )*
-        };
-    }
 
 parameterize!(
     test_same_encoding,
