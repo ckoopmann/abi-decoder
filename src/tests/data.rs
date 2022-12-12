@@ -1,4 +1,4 @@
-use crate::utils::{address_token_from_string, bytes_token_from_string};
+use crate::test_utils::{address_token_from_string, bytes_token_from_string};
 use ethabi::Token;
 
 pub fn token_hack_from_youtube_talk_expected_result() -> Vec<ethabi::Token> {

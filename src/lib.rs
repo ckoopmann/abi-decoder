@@ -23,6 +23,8 @@ use ethabi::token::Token;
 
 mod decoder;
 #[cfg(test)]
+mod test_utils;
+#[cfg(test)]
 mod tests;
 mod transaction_data;
 mod utils;

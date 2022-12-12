@@ -1,6 +1,7 @@
 use super::*;
-use crate::utils::{
-    address_token_from_string, fixed_bytes_token_from_string, parameterize, print_parse_tree,
+use crate::{
+    test_utils::{address_token_from_string, fixed_bytes_token_from_string, parameterize},
+    utils::print_parse_tree,
 };
 use ethabi::Token;
 use ethereum_types::U256;

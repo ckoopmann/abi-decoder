@@ -1,5 +1,5 @@
 use super::*;
-use crate::utils::parameterize;
+use crate::test_utils::parameterize;
 use decoder::preprocessing::add_padding;
 use ethabi::{Contract, Token};
 use ethers::providers::Middleware;
@@ -96,7 +96,7 @@ async fn produces_expected_result(tx_hash_and_chain_enum: (&str, Chain, Vec<Toke
         _ => None,
     };
     let arguments_encoded = add_padding(&get_encoded_arguments(tx_hash, provider_rpc_url).await);
-    utils::print_chunked_data("#### ENCODED ARGUMENTS ####", &arguments_encoded);
+    test_utils::print_chunked_data("#### ENCODED ARGUMENTS ####", &arguments_encoded);
 
     let tokens = decode_transaction_calldata(tx_hash, provider_rpc_url).await;
     println!("#### Decoded Tokens ####");
@@ -107,7 +107,7 @@ async fn produces_expected_result(tx_hash_and_chain_enum: (&str, Chain, Vec<Toke
     println!("### DONE ##");
     let tokens_reencoded = hex::encode(ethabi::encode(&tokens));
     println!("Reencoded tokens length: {}", tokens_reencoded.len());
-    utils::print_chunked_data("#### RE-ENCODED ARGUMENTS ####", &tokens_reencoded);
+    test_utils::print_chunked_data("#### RE-ENCODED ARGUMENTS ####", &tokens_reencoded);
 
     assert_eq!(tokens_reencoded, arguments_encoded);
 }
@@ -116,14 +116,14 @@ async fn produces_expected_result(tx_hash_and_chain_enum: (&str, Chain, Vec<Toke
 async fn same_decoding_as_etherscan(tx_hash: &str) {
     let tx_hash = tx_hash.trim_start_matches("0x");
     let expected_tokens =
-        utils::remove_single_top_level_tuple(decode_tx_via_etherscan(tx_hash).await.unwrap());
+        test_utils::remove_single_top_level_tuple(decode_tx_via_etherscan(tx_hash).await.unwrap());
 
     // let expected_tokens_reencoded = hex::encode(ethabi::encode(&expected_tokens));
     // println!("Checking reencoded tokens");
     // assert_eq!(arguments_encoded, expected_tokens_reencoded);
 
     let arguments_encoded = add_padding(&get_encoded_arguments(tx_hash, None).await);
-    utils::print_chunked_data("#### ENCODED ARGUMENTS ####", &arguments_encoded);
+    test_utils::print_chunked_data("#### ENCODED ARGUMENTS ####", &arguments_encoded);
 
     println!();
     println!("#### Expected Tokens ####");
@@ -139,7 +139,7 @@ async fn same_decoding_as_etherscan(tx_hash: &str) {
     }
     println!("### DONE ##");
 
-    let cleaned_expected_tokens = utils::replace_zero_value_with_uint(expected_tokens);
+    let cleaned_expected_tokens = test_utils::replace_zero_value_with_uint(expected_tokens);
     assert_eq!(tokens, cleaned_expected_tokens);
 }
 
@@ -147,10 +147,10 @@ async fn same_decoding_as_etherscan(tx_hash: &str) {
 async fn can_re_encode_single_transaction(tx_hash: &str) {
     let tx_hash = tx_hash.trim_start_matches("0x");
     let arguments_encoded = add_padding(&get_encoded_arguments(tx_hash, None).await);
-    utils::print_chunked_data("#### ENCODED ARGUMENTS ####", &arguments_encoded);
+    test_utils::print_chunked_data("#### ENCODED ARGUMENTS ####", &arguments_encoded);
 
     let expected_tokens =
-        utils::remove_single_top_level_tuple(decode_tx_via_etherscan(tx_hash).await.unwrap());
+        test_utils::remove_single_top_level_tuple(decode_tx_via_etherscan(tx_hash).await.unwrap());
     println!("#### Expected Tokens ####");
     for token in &expected_tokens {
         utils::print_parse_tree(token, 0);
@@ -164,7 +164,7 @@ async fn can_re_encode_single_transaction(tx_hash: &str) {
     println!("### DONE ##");
     let tokens_reencoded = hex::encode(ethabi::encode(&tokens));
     println!("Reencoded tokens length: {}", tokens_reencoded.len());
-    utils::print_chunked_data("#### RE-ENCODED ARGUMENTS ####", &tokens_reencoded);
+    test_utils::print_chunked_data("#### RE-ENCODED ARGUMENTS ####", &tokens_reencoded);
 
     assert_eq!(tokens_reencoded, arguments_encoded);
 }
@@ -172,7 +172,6 @@ async fn can_re_encode_single_transaction(tx_hash: &str) {
 // Opensea/Seaport transactions often are troublesome since they contain complex nested
 // data and added data after the encoded arguments. This makes it hard to decode them correctly
 #[tokio::main]
-#[test]
 async fn can_re_encode_all_transactions_to_seaport() {
     let start_block = 16136002;
     // TODO: Transactions with very large calldata to seaport methods can cause the algorithm
@@ -201,7 +200,7 @@ async fn can_re_encode_all_transactions_to_seaport() {
                 let tx_hash = hex::encode(tx.hash.0);
                 let calldata = hex::encode(&tx.input.0);
                 let encoded_arguments = add_padding(split_off_encoded_arguments(&calldata));
-                utils::print_chunked_data("#### ENCODED ARGUMENTS ####", &encoded_arguments);
+                test_utils::print_chunked_data("#### ENCODED ARGUMENTS ####", &encoded_arguments);
                 if encoded_arguments.len() > max_calldata_size {
                     println!("Skipping transaction with huge calldata: {}", tx_hash);
                     continue;
@@ -217,14 +216,14 @@ async fn can_re_encode_all_transactions_to_seaport() {
                 println!("### DONE ##");
                 let tokens_reencoded = hex::encode(ethabi::encode(&tokens));
                 println!("Reencoded tokens length: {}", tokens_reencoded.len());
-                utils::print_chunked_data("#### RE-ENCODED ARGUMENTS ####", &tokens_reencoded);
+                test_utils::print_chunked_data("#### RE-ENCODED ARGUMENTS ####", &tokens_reencoded);
                 assert_eq!(tokens_reencoded, encoded_arguments);
             }
         }
     }
 }
 #[tokio::main]
-// #[test]
+#[test]
 async fn can_re_encode_all_transactions_not_to_seaport() {
     let start_block = 16136001;
     let num_blocks = 1;
@@ -249,7 +248,7 @@ async fn can_re_encode_all_transactions_not_to_seaport() {
                 let tx_hash = hex::encode(tx.hash.0);
                 let calldata = hex::encode(&tx.input.0);
                 let encoded_arguments = add_padding(split_off_encoded_arguments(&calldata));
-                utils::print_chunked_data("#### ENCODED ARGUMENTS ####", &encoded_arguments);
+                test_utils::print_chunked_data("#### ENCODED ARGUMENTS ####", &encoded_arguments);
                 println!("Encoded arguments length: {}", encoded_arguments.len());
                 println!("Decoding tx: {}", tx_hash);
                 let tokens = decode_transaction_calldata(&tx_hash, None).await;
@@ -261,7 +260,7 @@ async fn can_re_encode_all_transactions_not_to_seaport() {
                 println!("### DONE ##");
                 let tokens_reencoded = hex::encode(ethabi::encode(&tokens));
                 println!("Reencoded tokens length: {}", tokens_reencoded.len());
-                utils::print_chunked_data("#### RE-ENCODED ARGUMENTS ####", &tokens_reencoded);
+                test_utils::print_chunked_data("#### RE-ENCODED ARGUMENTS ####", &tokens_reencoded);
                 assert_eq!(tokens_reencoded, encoded_arguments);
             }
         }
@@ -292,11 +291,11 @@ async fn can_re_encode_all_transactions_not_to_seaport() {
             println!("### DONE ##");
             let tokens_reencoded = hex::encode(ethabi::encode(&tokens));
             println!("Reencoded tokens length: {}", tokens_reencoded.len());
-            utils::print_chunked_data("#### RE-ENCODED ARGUMENTS ####", &tokens_reencoded);
+            test_utils::print_chunked_data("#### RE-ENCODED ARGUMENTS ####", &tokens_reencoded);
             let calldata = hex::encode(&tx.input.0);
             let encoded_arguments = add_padding(split_off_encoded_arguments(&calldata));
             println!("Encoded arguments length: {}", encoded_arguments.len());
-            utils::print_chunked_data("#### ENCODED ARGUMENTS ####", &encoded_arguments);
+            test_utils::print_chunked_data("#### ENCODED ARGUMENTS ####", &encoded_arguments);
             assert_eq!(tokens_reencoded, encoded_arguments);
         }
     }
