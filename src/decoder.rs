@@ -8,8 +8,7 @@ use std::collections::HashMap;
 
 use std::str::FromStr;
 
-// TODO: Array tokens of different types ?
-// TODO: Array of tuples
+// TODO: Add check that ensures arrays have elements of the same type
 
 #[derive(Debug, Clone)]
 pub struct Location {
@@ -92,54 +91,84 @@ pub fn parse_token(
     disallowed_markers: &HashMap<usize, MarkerType>,
     recurse_disallow_markers: bool,
 ) -> Option<TokenOrTopLevel> {
-    let result = match parse_marker {
-        ParseMarker::Tuple(ref location) => {
-            let data_to_parse = chunks[location.start..location.end].to_vec();
-            let elements = data_to_parse.iter().map(|x| tokenize_argument(x)).collect();
-            Some(TokenOrTopLevel::Token(Token::Tuple(elements)))
-        }
-        ParseMarker::Word(location) => {
-            Some(TokenOrTopLevel::Token(tokenize_argument(chunks[*location])))
-        }
+    match parse_marker {
+        ParseMarker::Tuple(ref location) => parse_tuple(location, chunks),
+        ParseMarker::Word(location) => parse_word(location, chunks),
         ParseMarker::DynamicBytes(padding, location) => {
-            let mut decoded_bytes: Vec<u8> = chunks[location.start..location.end]
-                .iter()
-                .flat_map(|chunk| hex::decode(chunk).expect("Failed to decode dynamic bytes"))
-                .collect();
-            decoded_bytes.truncate(decoded_bytes.len().saturating_sub(*padding));
-            Some(TokenOrTopLevel::Token(Token::Bytes(decoded_bytes)))
+            parse_dynamic_bytes(padding, location, chunks)
         }
-        ParseMarker::StaticArray(element_size, ref location) => {
-            let mut parse_tree = Vec::new();
-            let data_to_parse = chunks[location.start..location.end].to_vec();
-            let mut i = 0;
-            while i < data_to_parse.len() {
-                let new_parse_marker = if *element_size == 1 {
-                    ParseMarker::Word(i)
-                } else {
-                    ParseMarker::Tuple(Location {
-                        start: i,
-                        end: i + element_size,
-                    })
-                };
-
-                parse_tree.push(
-                    parse_token(&new_parse_marker, &data_to_parse, disallowed_markers, true)?
-                        .to_token(),
-                );
-                i += element_size;
-            }
-            let result = Token::Array(parse_tree);
-            Some(TokenOrTopLevel::Token(result))
-        }
+        ParseMarker::StaticArray(element_size, ref location) => parse_static_array(
+            element_size,
+            location,
+            chunks,
+            disallowed_markers,
+            recurse_disallow_markers,
+        ),
         _ => parse_nested_token(
             parse_marker,
             chunks,
             disallowed_markers,
             recurse_disallow_markers,
         ),
-    };
-    result
+    }
+}
+
+fn parse_static_array(
+    element_size: &usize,
+    location: &Location,
+    chunks: &[&str],
+    disallowed_markers: &HashMap<usize, MarkerType>,
+    recurse_disallow_markers: bool,
+) -> Option<TokenOrTopLevel> {
+    let mut parse_tree = Vec::new();
+    let data_to_parse = chunks[location.start..location.end].to_vec();
+    let mut i = 0;
+    while i < data_to_parse.len() {
+        let new_parse_marker = if *element_size == 1 {
+            ParseMarker::Word(i)
+        } else {
+            ParseMarker::Tuple(Location {
+                start: i,
+                end: i + element_size,
+            })
+        };
+
+        parse_tree.push(
+            parse_token(
+                &new_parse_marker,
+                &data_to_parse,
+                disallowed_markers,
+                recurse_disallow_markers,
+            )?
+            .to_token(),
+        );
+        i += element_size;
+    }
+    let result = Token::Array(parse_tree);
+    Some(TokenOrTopLevel::Token(result))
+}
+
+fn parse_dynamic_bytes(
+    padding: &usize,
+    location: &Location,
+    chunks: &[&str],
+) -> Option<TokenOrTopLevel> {
+    let mut decoded_bytes: Vec<u8> = chunks[location.start..location.end]
+        .iter()
+        .flat_map(|chunk| hex::decode(chunk).expect("Failed to decode dynamic bytes"))
+        .collect();
+    decoded_bytes.truncate(decoded_bytes.len().saturating_sub(*padding));
+    Some(TokenOrTopLevel::Token(Token::Bytes(decoded_bytes)))
+}
+
+fn parse_word(location: &usize, chunks: &[&str]) -> Option<TokenOrTopLevel> {
+    Some(TokenOrTopLevel::Token(tokenize_argument(chunks[*location])))
+}
+
+fn parse_tuple(location: &Location, chunks: &[&str]) -> Option<TokenOrTopLevel> {
+    let data_to_parse = chunks[location.start..location.end].to_vec();
+    let elements = data_to_parse.iter().map(|x| tokenize_argument(x)).collect();
+    Some(TokenOrTopLevel::Token(Token::Tuple(elements)))
 }
 
 fn parse_nested_token(
