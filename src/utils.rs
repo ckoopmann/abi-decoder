@@ -15,7 +15,6 @@ macro_rules! parameterize {
         };
     }
 
-
 pub fn address_token_from_string(address: &str) -> Token {
     Token::Address(H160::from_str(address).unwrap())
 }
