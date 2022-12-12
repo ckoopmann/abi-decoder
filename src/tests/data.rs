@@ -1,14 +1,5 @@
+use crate::utils::{address_token_from_string, bytes_token_from_string};
 use ethabi::Token;
-use ethereum_types::H160;
-use std::str::FromStr;
-
-fn address_token_from_string(address: &str) -> Token {
-    Token::Address(H160::from_str(address).unwrap())
-}
-
-fn bytes_token_from_string(bytes: &str) -> Token {
-    Token::Bytes(hex::decode(bytes).unwrap())
-}
 
 pub fn token_hack_from_youtube_talk_expected_result() -> Vec<ethabi::Token> {
     vec![

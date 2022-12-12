@@ -3,6 +3,18 @@ use ethabi::Token;
 use ethereum_types::{H160, U256};
 use std::str::FromStr;
 
+pub fn address_token_from_string(address: &str) -> Token {
+    Token::Address(H160::from_str(address).unwrap())
+}
+
+pub fn bytes_token_from_string(bytes: &str) -> Token {
+    Token::Bytes(hex::decode(bytes).unwrap())
+}
+
+pub fn fixed_bytes_token_from_string(bytes: &str) -> Token {
+    Token::FixedBytes(hex::decode(bytes).unwrap())
+}
+
 pub fn print_with_indentation(indent: usize, s: &str) {
     for _i in 0..indent {
         print!("    ");
@@ -84,8 +96,4 @@ pub fn print_chunked_data(label: &str, data: &str) {
             u64::from_str_radix(chunk.trim_start_matches('0'), 16).unwrap_or(0)
         );
     }
-}
-
-pub fn address_token_from_string(address: &str) -> Token {
-    Token::Address(H160::from_str(address).unwrap())
 }
