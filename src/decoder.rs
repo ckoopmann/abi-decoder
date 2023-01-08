@@ -18,6 +18,7 @@ pub fn chunk_and_decode_data(encoded_arguments: &str) -> Vec<Token> {
 
     let encoded_arguments = add_padding(encoded_arguments);
     let chunks = chunk_data(&encoded_arguments);
+    println!("#### Encoded calldata (without function selector) ####");
     for (i, chunk) in chunks.iter().enumerate() {
         println!(
             "{}: {} - {}",
@@ -26,6 +27,7 @@ pub fn chunk_and_decode_data(encoded_arguments: &str) -> Vec<Token> {
             u64::from_str_radix(chunk.trim_start_matches('0'), 16).unwrap_or(0)
         );
     }
+    println!("");
     decode_chunks(chunks)
 }
 
