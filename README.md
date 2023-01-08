@@ -2,6 +2,8 @@
 This little program attemps to determine the structure of abi encoded data without knowing the abi specification.
 It was inspired by [this excellent talk](https://www.youtube.com/watch?v=RZytWxtKODg) and primarily served as a learning project to better understand abi encoding and learn rust programming.
 
+![](example.gif)
+
 # How to use it
 ## Decode calldata from given transaction
 `cargo run 0x0031bd14c2a69ae3b4e1fbb986f7f5de1424e9f35501d7f166d10103c82de1cc`
