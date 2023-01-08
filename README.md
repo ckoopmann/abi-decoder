@@ -25,7 +25,7 @@ Can be decoded as an array of two elements (`3`, and `4`) because:
 2. Word 1 (`2`) is a valid array length that consumes the rest of the available data
 
 Changing word 0 or word 1 on its own in any way or appending / removing elements from the data would break these assumptions and lead to the data not being a valid array anymore.
-Even though the same data could be decoded as individual pieces of staticly sized data (i.e. the numbers `32`, `2`, `3` and `4`) it would be quite a coincidence. Therefore the dynamic / "more structure" interpreation of the data as an array is assumed more likely.
+Even though the same data could be decoded as individual pieces of staticly sized data (i.e. the numbers `32`, `2`, `3` and `4`) it would be quite a coincidence. Therefore the dynamic / "more structured" interpretation of the data as an array is assumed more likely.
 
 
 
