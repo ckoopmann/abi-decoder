@@ -18,7 +18,9 @@ pub fn split_off_encoded_arguments(calldata: &str) -> &str {
 pub async fn get_calldata(tx_hash: &str, provider_rpc_url: Option<&str>) -> String {
     let mut tx_hash_bytes: [u8; 32] = [0; 32];
     hex::decode_to_slice(tx_hash, &mut tx_hash_bytes).expect("Decoding failed");
-    println!("Getting trransaction: {:?}", tx_hash);
+    println!("\n");
+    println!("Getting calldata (input) for tx: {:?}", tx_hash);
+    println!("\n");
     let provider = get_provider(provider_rpc_url);
     let tx = provider
         .get_transaction(tx_hash_bytes)

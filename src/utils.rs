@@ -27,7 +27,7 @@ pub fn print_parse_tree(parse_tree: &Token, indentation: usize) {
             print_with_indentation(indentation, &format!("Bytes: {:?}", hex::encode(bytes)));
         }
         token => {
-            print_with_indentation(indentation, &format!("Token: {:?}", token));
+            print_with_indentation(indentation, &format!("{:?}", token));
         }
     }
 }
